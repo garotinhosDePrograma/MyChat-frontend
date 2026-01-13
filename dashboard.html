@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0084ff">
+    <title>Dashboard - MyChat</title>
+    
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/x-icon" href="assets/icons/favicon.ico">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <!-- Sidebar Header -->
+            <div class="sidebar-header">
+                <h2>💬 MyChat</h2>
+                <div class="user-menu">
+                    <button class="user-menu-btn" id="user-menu-btn">⋮</button>
+                    <div class="user-menu-dropdown hidden" id="user-menu-dropdown">
+                        <div class="user-info">
+                            <p><strong id="user-name-display"></strong></p>
+                            <p class="text-muted" id="user-email-display"></p>
+                        </div>
+                        <button id="logout-btn">Sair</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Search Bar -->
+            <div class="search-bar">
+                <button class="btn btn-primary btn-full" id="add-contact-btn">
+                    + Adicionar Contato
+                </button>
+            </div>
+            
+            <!-- Contacts List -->
+            <div class="contacts-list" id="contacts-list">
+                <div class="spinner"></div>
+            </div>
+        </aside>
+        
+        <!-- Chat Area -->
+        <main class="chat-area" id="chat-area" style="display: none;">
+            <!-- Chat Header -->
+            <div class="chat-header">
+                <div class="chat-header-info">
+                    <button class="btn btn-secondary btn-sm" onclick="document.querySelector('.sidebar').classList.remove('hidden')" style="display: none;" id="back-btn">
+                        ←
+                    </button>
+                    <div class="contact-avatar" id="chat-header-avatar">?</div>
+                    <h3 class="chat-header-name" id="chat-header-name">Selecione um contato</h3>
+                </div>
+            </div>
+            
+            <!-- Messages -->
+            <div class="chat-messages" id="chat-messages">
+                <!-- Messages will be rendered here -->
+            </div>
+            
+            <!-- Input -->
+            <div class="chat-input-container">
+                <form class="chat-input-form" id="chat-form">
+                    <textarea 
+                        class="chat-input" 
+                        id="chat-input" 
+                        placeholder="Digite uma mensagem..."
+                        rows="1"
+                    ></textarea>
+                    <button type="submit" class="send-btn" id="send-btn">
+                        ➤
+                    </button>
+                </form>
+            </div>
+        </main>
+        
+        <!-- Empty State (quando nenhum contato selecionado) -->
+        <div class="chat-area flex-center" id="empty-state">
+            <div class="empty-state">
+                <div class="empty-state-icon">💬</div>
+                <h3>Bem-vindo ao MyChat</h3>
+                <p class="text-muted">Selecione um contato para começar a conversar</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal: Adicionar Contato -->
+    <div class="modal hidden" id="add-contact-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Adicionar Contato</h3>
+                <button class="close-modal" id="close-modal">×</button>
+            </div>
+            
+            <div class="input-group">
+                <label for="search-input">Buscar por nome ou email</label>
+                <input 
+                    type="text" 
+                    id="search-input" 
+                    placeholder="Digite para buscar..."
+                    autocomplete="off"
+                >
+            </div>
+            
+            <div class="search-results" id="search-results">
+                <!-- Search results will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/sw-register.js"></script>
+    <script src="js/dashboard.js"></script>
+    
+    <script>
+        // Mostrar informações do usuário
+        const user = Storage.getUser();
+        if (user) {
+            document.getElementById('user-name-display').textContent = user.name;
+            document.getElementById('user-email-display').textContent = user.email;
+        }
+        
+        // Mostrar botão de voltar em mobile
+        if (window.innerWidth <= 768) {
+            document.getElementById('back-btn').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

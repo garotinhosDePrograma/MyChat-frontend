@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MyChat - Conecte-se com pessoas de forma simples e rápida">
+    <meta name="theme-color" content="#0084ff">
+    <title>MyChat - Chat em tempo real</title>
+    
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/x-icon" href="assets/icons/favicon.ico">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/landing.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <h1>💬 MyChat</h1>
+                </div>
+                <nav class="nav">
+                    <a href="login.html" class="btn btn-secondary">Entrar</a>
+                    <a href="register.html" class="btn btn-primary">Cadastrar</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h2 class="hero-title">Converse com quem você quiser</h2>
+                <p class="hero-subtitle">
+                    Simples, rápido e gratuito. MyChat te conecta com pessoas de todo o mundo.
+                </p>
+                <div class="hero-buttons">
+                    <a href="register.html" class="btn btn-primary btn-lg">Começar agora</a>
+                    <a href="login.html" class="btn btn-secondary btn-lg">Já tenho conta</a>
+                </div>
+            </div>
+            <div class="hero-image">
+                <div class="chat-preview">
+                    <div class="chat-bubble left">
+                        <p>Olá! Tudo bem? 👋</p>
+                    </div>
+                    <div class="chat-bubble right">
+                        <p>Oi! Tudo ótimo, e você?</p>
+                    </div>
+                    <div class="chat-bubble left">
+                        <p>Também! Vamos conversar? 😊</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="container">
+            <h3 class="section-title">Por que escolher o MyChat?</h3>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h4>Rápido e Simples</h4>
+                    <p>Interface intuitiva e fácil de usar. Comece a conversar em segundos.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h4>Seguro</h4>
+                    <p>Suas mensagens e dados pessoais estão protegidos com criptografia.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h4>Multiplataforma</h4>
+                    <p>Use no computador, tablet ou celular. Funciona em qualquer dispositivo.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💬</div>
+                    <h4>Conversas em Tempo Real</h4>
+                    <p>Mensagens instantâneas. Converse sem delay.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">✨</div>
+                    <h4>Gratuito</h4>
+                    <p>100% gratuito. Sem anúncios, sem custos ocultos.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌐</div>
+                    <h4>Global</h4>
+                    <p>Conecte-se com pessoas de qualquer lugar do mundo.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <div class="container">
+            <h3>Pronto para começar?</h3>
+            <p>Crie sua conta gratuitamente e comece a conversar agora mesmo.</p>
+            <a href="register.html" class="btn btn-primary btn-lg">Criar conta grátis</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 MyChat. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/sw-register.js"></script>
+    <script>
+        // Redireciona para dashboard se já estiver autenticado
+        if (Storage.isAuthenticated()) {
+            window.location.href = 'dashboard.html';
+        }
+    </script>
+</body>
+</html>
