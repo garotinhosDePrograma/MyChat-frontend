@@ -37,8 +37,57 @@ async function init() {
     setupEventListeners();
     await loadContacts();
     
-    // Auto-refresh de contatos a cada 10 segundos
-    setInterval(loadContacts, 10000);
+    const token = Storage.getToken();
+    if (token) {
+        socketManager.connect(token);
+        setupSocketHandlers();
+    }
+}
+
+function setupSocketHandlers() {
+    socketManager.on('newMessage', (message) => {
+        if (state.selectedContact && 
+            (message.sender_id === state.selectedContact.contact_user_id ||
+             message.receiver_id === state.selectedContact.contact_user_id)) {
+            
+            state.messages.push(message);
+            renderMessages();
+            Utils.scrollToBottom(elements.chatMessages);
+            
+            if (message.receiver_id === state.currentUser.id) {
+                socketManager.markAsRead(message.sender_id);
+            }
+        }
+        
+        loadContacts();
+    });
+
+    socketManager.on('messageNotification', (data) => {
+        Utils.showToast(`${data.from_user.name}: ${data.message.content.substring(0, 50)}`, 'info', 5000);
+        loadContacts(); // Atualizar badge de não lidas
+    });
+
+    // Usuário digitando
+    socketManager.on('userTyping', (data) => {
+        if (state.selectedContact && data.user_id === state.selectedContact.contact_user_id) {
+            showTypingIndicator(data.name);
+        }
+    });
+
+    // Usuário parou de digitar
+    socketManager.on('userStoppedTyping', (data) => {
+        if (state.selectedContact && data.user_id === state.selectedContact.contact_user_id) {
+            hideTypingIndicator();
+        }
+    });
+
+    socketManager.on('userOnline', (data) => {
+        updateContactStatus(data.user_id, true);
+    });
+
+    socketManager.on('userOffline', (data) => {
+        updateContactStatus(data.user_id, false);
+    });
 }
 
 // Event Listeners
@@ -150,6 +199,10 @@ function selectContact(contactUserId) {
     state.selectedContact = contact;
     renderContacts(); // Re-render para atualizar active state
     loadConversation(contactUserId);
+
+    socketManager.joinConversation(contactUserId);
+
+    socketManager.markAsRead();
     
     // Mostrar chat area
     if (elements.chatArea) {
@@ -221,17 +274,18 @@ async function handleSendMessage(e) {
     elements.chatInput.disabled = true;
     
     try {
-        await API.sendMessage(state.selectedContact.contact_user_id, content);
-        
+        const sent = socketManager.sendMessage(state.selectedContact.contact_user_id, content);
+
+        if (!send) {
+            await API.sendMessage(state.selectedContact.contact_user_id, content);
+            await loadConversation(state.selectedContact.contact_user_id);
+        }
+
         // Limpar input
         elements.chatInput.value = '';
         elements.chatInput.style.height = 'auto';
         
-        // Recarregar conversa
-        await loadConversation(state.selectedContact.contact_user_id);
-        
-        // Atualizar lista de contatos
-        await loadContacts();
+        socketManager.stopTyping(state.selectedContact.contact_user_id);
         
     } catch (error) {
         console.error('Erro ao enviar mensagem:', error);
@@ -239,6 +293,53 @@ async function handleSendMessage(e) {
     } finally {
         elements.chatInput.disabled = false;
         elements.chatInput.focus();
+    }
+}
+
+elements.chatInput?.addEventListener('input', Utils.debounce(() => {
+    if (!state.selectedContact) return;
+
+    const content = elements.chatInput.value.trim();
+    
+    if (content) {
+        socketManager.startTyping(state.selectedContact.contact_user_id);
+        
+        // Auto-parar após 3 segundos sem digitar
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+            socketManager.stopTyping(state.selectedContact.contact_user_id);
+        }, 3000);
+    } else {
+        socketManager.stopTyping(state.selectedContact.contact_user_id);
+    }
+}, 300));
+
+let typingTimeout;
+
+function showTypingIndicator(userName) {
+    const indicator = document.getElementById('typing-indicator');
+    if (indicator) {
+        indicator.classList.remove('hidden');
+        // Opcional: mostrar nome
+        // indicator.querySelector('span')?.textContent = `${userName} está digitando...`;
+    }
+}
+
+function hideTypingIndicator() {
+    const indicator = document.getElementById('typing-indicator');
+    if (indicator) {
+        indicator.classList.add('hidden');
+    }
+}
+
+function updateContactStatus(userId, isOnline) {
+    const contactItem = document.querySelector(`[data-contact-id="${userId}"]`);
+    if (contactItem) {
+        if (isOnline) {
+            contactItem.classList.add('online');
+        } else {
+            contactItem.classList.remove('online');
+        }
     }
 }
 
@@ -345,6 +446,12 @@ function getInitials(name) {
         .join('')
         .toUpperCase()
         .substring(0, 2);
+}
+
+function handleLogout() {
+    socketManager.disconnect();
+    Storage.clear();
+    window.location.href = "index.html";
 }
 
 // Iniciar
