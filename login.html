@@ -16,16 +16,21 @@
 </head>
 <body>
     <div class="auth-container">
-        <a href="index.html" class="back-link">← Voltar</a>
+        <!-- Theme Toggle -->
+        <div class="auth-theme-toggle" id="theme-toggle-auth"></div>
+        
+        <a href="index.html" class="back-link">
+            ← Voltar para Home
+        </a>
         
         <div class="auth-card">
             <div class="auth-header">
                 <div class="auth-logo">💬</div>
                 <h1 class="auth-title">Entrar no MyChat</h1>
-                <p class="auth-subtitle">Bem-vindo de volta!</p>
+                <p class="auth-subtitle">Bem-vindo de volta! Que bom te ver novamente 👋</p>
             </div>
             
-            <form class="auth-form" onsubmit="handleLogin(event)">
+            <form class="auth-form" onsubmit="handleLogin(event)" id="login-form">
                 <div class="input-group">
                     <label for="email">Email</label>
                     <input 
@@ -34,21 +39,43 @@
                         placeholder="seu@email.com"
                         required
                         autocomplete="email"
+                        aria-label="Email"
                     >
                 </div>
                 
                 <div class="input-group">
                     <label for="password">Senha</label>
-                    <input 
-                        type="password" 
-                        id="password" 
-                        placeholder="••••••••"
-                        required
-                        autocomplete="current-password"
-                    >
+                    <div style="position: relative;">
+                        <input 
+                            type="password" 
+                            id="password" 
+                            placeholder="••••••••"
+                            required
+                            autocomplete="current-password"
+                            aria-label="Senha"
+                        >
+                        <button 
+                            type="button" 
+                            class="password-toggle" 
+                            id="toggle-password"
+                            aria-label="Mostrar senha"
+                            title="Mostrar/Ocultar senha"
+                        >
+                            👁️
+                        </button>
+                    </div>
                 </div>
                 
-                <button type="submit" class="btn btn-primary btn-full">
+                <div class="checkbox-group">
+                    <input 
+                        type="checkbox" 
+                        id="remember" 
+                        name="remember"
+                    >
+                    <label for="remember">Lembrar de mim</label>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-full" id="login-btn">
                     Entrar
                 </button>
             </form>
@@ -56,9 +83,25 @@
             <div class="auth-footer">
                 <p>
                     Não tem uma conta? 
-                    <a href="register.html">Cadastre-se</a>
+                    <a href="register.html">Cadastre-se gratuitamente</a>
+                </p>
+                <p style="margin-top: 12px;">
+                    <a href="#" style="font-size: 14px;">Esqueceu sua senha?</a>
                 </p>
             </div>
+            
+            <!-- Social Login (Opcional) -->
+            <!-- <div class="social-login">
+                <p class="social-login-title">Ou entre com</p>
+                <div class="social-buttons">
+                    <button type="button" class="btn-social">
+                        <span>🔵</span> Google
+                    </button>
+                    <button type="button" class="btn-social">
+                        <span>📘</span> Facebook
+                    </button>
+                </div>
+            </div> -->
         </div>
     </div>
 
@@ -67,7 +110,55 @@
     <script src="js/storage.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/api.js"></script>
+    <script src="js/theme.js"></script>
     <script src="js/sw-register.js"></script>
     <script src="js/auth.js"></script>
+    
+    <script>
+        // Adicionar toggle de tema
+        const themeToggle = document.getElementById('theme-toggle-auth');
+        if (themeToggle) {
+            ThemeManager.addToggleTo(themeToggle);
+        }
+        
+        // Toggle mostrar/ocultar senha
+        const togglePassword = document.getElementById('toggle-password');
+        const passwordInput = document.getElementById('password');
+        
+        togglePassword?.addEventListener('click', () => {
+            const type = passwordInput.type === 'password' ? 'text' : 'password';
+            passwordInput.type = type;
+            togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
+        });
+        
+        // Validação em tempo real (opcional)
+        const emailInput = document.getElementById('email');
+        emailInput?.addEventListener('blur', () => {
+            const email = emailInput.value.trim();
+            if (email && !Utils.isValidEmail(email)) {
+                emailInput.classList.add('input-error');
+                Utils.showToast('Email inválido', 'error', 2000);
+            } else {
+                emailInput.classList.remove('input-error');
+            }
+        });
+        
+        // Animação de loading no botão
+        const loginForm = document.getElementById('login-form');
+        loginForm?.addEventListener('submit', (e) => {
+            const btn = document.getElementById('login-btn');
+            btn.classList.add('btn-loading');
+        });
+        
+        // Atalho de teclado - Enter para submit
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                const activeElement = document.activeElement;
+                if (activeElement.tagName === 'INPUT') {
+                    loginForm?.requestSubmit();
+                }
+            }
+        });
+    </script>
 </body>
 </html>
