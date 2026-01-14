@@ -21,14 +21,21 @@
             <!-- Sidebar Header -->
             <div class="sidebar-header">
                 <h2>💬 MyChat</h2>
-                <div class="user-menu">
-                    <button class="user-menu-btn" id="user-menu-btn">⋮</button>
-                    <div class="user-menu-dropdown hidden" id="user-menu-dropdown">
-                        <div class="user-info">
-                            <p><strong id="user-name-display"></strong></p>
-                            <p class="text-muted" id="user-email-display"></p>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <!-- Theme Toggle -->
+                    <div id="theme-toggle-container"></div>
+                    
+                    <!-- User Menu -->
+                    <div class="user-menu">
+                        <button class="user-menu-btn" id="user-menu-btn" aria-label="Menu do usuário">⋮</button>
+                        <div class="user-menu-dropdown hidden" id="user-menu-dropdown">
+                            <div class="user-info">
+                                <strong id="user-name-display"></strong>
+                                <p class="text-muted" id="user-email-display"></p>
+                            </div>
+                            <button id="settings-btn">⚙️ Configurações</button>
+                            <button id="logout-btn" class="text-danger">🚪 Sair</button>
                         </div>
-                        <button id="logout-btn">Sair</button>
                     </div>
                 </div>
             </div>
@@ -36,7 +43,7 @@
             <!-- Search Bar -->
             <div class="search-bar">
                 <button class="btn btn-primary btn-full" id="add-contact-btn">
-                    + Adicionar Contato
+                    ➕ Adicionar Contato
                 </button>
             </div>
             
@@ -48,14 +55,27 @@
         
         <!-- Chat Area -->
         <main class="chat-area" id="chat-area" style="display: none;">
+            <div class="chat-background"></div>
+            
             <!-- Chat Header -->
             <div class="chat-header">
                 <div class="chat-header-info">
-                    <button class="btn btn-secondary btn-sm" onclick="document.querySelector('.sidebar').classList.remove('hidden')" style="display: none;" id="back-btn">
+                    <button class="btn btn-ghost btn-icon" onclick="document.querySelector('.sidebar').classList.remove('hidden')" style="display: none;" id="back-btn" aria-label="Voltar">
                         ←
                     </button>
                     <div class="contact-avatar" id="chat-header-avatar">?</div>
-                    <h3 class="chat-header-name" id="chat-header-name">Selecione um contato</h3>
+                    <div>
+                        <h3 class="chat-header-name" id="chat-header-name">Selecione um contato</h3>
+                        <p class="chat-header-status text-muted" id="chat-header-status">Online</p>
+                    </div>
+                </div>
+                <div>
+                    <button class="btn btn-ghost btn-icon" aria-label="Buscar" title="Buscar mensagens">
+                        🔍
+                    </button>
+                    <button class="btn btn-ghost btn-icon" aria-label="Mais opções" title="Mais opções">
+                        ⋮
+                    </button>
                 </div>
             </div>
             
@@ -64,16 +84,31 @@
                 <!-- Messages will be rendered here -->
             </div>
             
+            <!-- Typing Indicator (hidden by default) -->
+            <div id="typing-indicator" class="hidden" style="padding: 0 20px 10px;">
+                <div class="typing-indicator">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+            
             <!-- Input -->
             <div class="chat-input-container">
                 <form class="chat-input-form" id="chat-form">
-                    <textarea 
-                        class="chat-input" 
-                        id="chat-input" 
-                        placeholder="Digite uma mensagem..."
-                        rows="1"
-                    ></textarea>
-                    <button type="submit" class="send-btn" id="send-btn">
+                    <div class="chat-input-wrapper">
+                        <textarea 
+                            class="chat-input" 
+                            id="chat-input" 
+                            placeholder="Digite uma mensagem..."
+                            rows="1"
+                            aria-label="Digite sua mensagem"
+                        ></textarea>
+                        <button type="button" class="emoji-btn" aria-label="Adicionar emoji" title="Em breve: Emojis">
+                            😊
+                        </button>
+                    </div>
+                    <button type="submit" class="send-btn" id="send-btn" aria-label="Enviar mensagem">
                         ➤
                     </button>
                 </form>
@@ -86,16 +121,19 @@
                 <div class="empty-state-icon">💬</div>
                 <h3>Bem-vindo ao MyChat</h3>
                 <p class="text-muted">Selecione um contato para começar a conversar</p>
+                <p class="text-muted" style="font-size: 12px; margin-top: 20px;">
+                    💡 Dica: Use <kbd>Ctrl+K</kbd> para buscar contatos
+                </p>
             </div>
         </div>
     </div>
     
     <!-- Modal: Adicionar Contato -->
-    <div class="modal hidden" id="add-contact-modal">
+    <div class="modal hidden" id="add-contact-modal" role="dialog" aria-labelledby="modal-title" aria-modal="true">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Adicionar Contato</h3>
-                <button class="close-modal" id="close-modal">×</button>
+                <h3 id="modal-title">Adicionar Contato</h3>
+                <button class="close-modal" id="close-modal" aria-label="Fechar modal">×</button>
             </div>
             
             <div class="input-group">
@@ -105,6 +143,7 @@
                     id="search-input" 
                     placeholder="Digite para buscar..."
                     autocomplete="off"
+                    aria-label="Campo de busca"
                 >
             </div>
             
@@ -119,6 +158,7 @@
     <script src="js/storage.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/api.js"></script>
+    <script src="js/theme.js"></script>
     <script src="js/sw-register.js"></script>
     <script src="js/dashboard.js"></script>
     
@@ -130,10 +170,24 @@
             document.getElementById('user-email-display').textContent = user.email;
         }
         
+        // Adicionar toggle de tema ao container
+        const themeContainer = document.getElementById('theme-toggle-container');
+        if (themeContainer) {
+            ThemeManager.addToggleTo(themeContainer);
+        }
+        
         // Mostrar botão de voltar em mobile
         if (window.innerWidth <= 768) {
-            document.getElementById('back-btn').style.display = 'block';
+            document.getElementById('back-btn').style.display = 'flex';
         }
+        
+        // Atalho de teclado para buscar contatos (Ctrl+K)
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                document.getElementById('add-contact-btn')?.click();
+            }
+        });
     </script>
 </body>
 </html>
