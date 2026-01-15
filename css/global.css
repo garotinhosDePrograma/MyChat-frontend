@@ -101,6 +101,7 @@ html {
     font-size: 16px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
 }
 
 body {
@@ -111,6 +112,12 @@ body {
     color: var(--text-primary);
     background-color: var(--bg-secondary);
     transition: background-color var(--transition), color var(--transition);
+    overflow: hidden;
+}
+
+/* Permitir scroll apenas onde necessário */
+body.modal-open {
+    overflow: hidden;
 }
 
 /* Scrollbar personalizada */
@@ -392,18 +399,18 @@ a:hover {
     border-width: 2px;
 }
 
-/* Toast/Alert */
+/* Toast/Alert - CORRIGIDO: Agora aparece NO TOPO */
 .toast {
     position: fixed;
-    bottom: 20px;
+    top: 20px;
     right: 20px;
     background-color: var(--bg-primary);
     color: var(--text-primary);
     padding: 16px 24px;
     border-radius: var(--border-radius-lg);
     box-shadow: var(--shadow-xl);
-    z-index: 9999;
-    animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s;
+    z-index: 99999;
+    animation: slideInTop 0.3s ease, fadeOutTop 0.3s ease 2.7s;
     min-width: 250px;
     max-width: 400px;
     border-left: 4px solid var(--primary-color);
@@ -421,21 +428,21 @@ a:hover {
     border-left-color: var(--warning-color);
 }
 
-@keyframes slideIn {
+@keyframes slideInTop {
     from {
-        transform: translateX(400px);
+        transform: translateY(-100px);
         opacity: 0;
     }
     to {
-        transform: translateX(0);
+        transform: translateY(0);
         opacity: 1;
     }
 }
 
-@keyframes fadeOut {
+@keyframes fadeOutTop {
     to {
         opacity: 0;
-        transform: translateX(400px);
+        transform: translateY(-100px);
     }
 }
 
@@ -653,10 +660,11 @@ a:hover {
     }
     
     .toast {
+        top: 10px;
         right: 10px;
         left: 10px;
-        bottom: 10px;
         min-width: auto;
+        max-width: none;
     }
     
     .card {
@@ -672,6 +680,20 @@ a:hover {
     .btn-group .btn {
         width: 100%;
     }
+}
+
+/* Acessibilidade */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible) {
+    outline: none;
 }
 
 /* Dark mode transition */
