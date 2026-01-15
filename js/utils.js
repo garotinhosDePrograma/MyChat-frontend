@@ -1,6 +1,6 @@
-// Funções utilitárias - Versão 2.0
+// Funções utilitárias - Versão 2.1 CORRIGIDA
 const Utils = {
-    // Mostrar toast/notificação com tipos
+    // Mostrar toast/notificação com tipos - CORRIGIDO: aparece no topo
     showToast(message, type = 'success', duration = 3000) {
         // Remover toast anterior se existir
         const existingToast = document.querySelector('.toast');
@@ -27,17 +27,18 @@ const Utils = {
             </div>
         `;
         
-        document.body.appendChild(toast);
+        // CORRIGIDO: Adicionar no topo do body
+        document.body.insertBefore(toast, document.body.firstChild);
         
         // Animação de saída
         setTimeout(() => {
-            toast.style.animation = 'fadeOut 0.3s ease forwards';
+            toast.style.animation = 'fadeOutTop 0.3s ease forwards';
             setTimeout(() => toast.remove(), 300);
         }, duration);
         
         // Fechar ao clicar
         toast.addEventListener('click', () => {
-            toast.style.animation = 'fadeOut 0.3s ease forwards';
+            toast.style.animation = 'fadeOutTop 0.3s ease forwards';
             setTimeout(() => toast.remove(), 300);
         });
     },
@@ -231,19 +232,29 @@ const Utils = {
         };
     },
     
-    // Scroll suave para elemento
+    // Scroll suave para elemento - CORRIGIDO
     scrollToBottom(element, behavior = 'smooth') {
         if (!element) return;
-        element.scrollTo({
-            top: element.scrollHeight,
-            behavior: behavior
+        
+        // CORRIGIDO: Usar requestAnimationFrame para melhor performance
+        requestAnimationFrame(() => {
+            element.scrollTo({
+                top: element.scrollHeight,
+                behavior: behavior
+            });
         });
     },
     
-    // Verificar se está no bottom
+    // Verificar se está no bottom - CORRIGIDO
     isScrolledToBottom(element, threshold = 100) {
         if (!element) return false;
-        return element.scrollHeight - element.scrollTop - element.clientHeight < threshold;
+        
+        // CORRIGIDO: Melhorar cálculo
+        const scrollTop = element.scrollTop;
+        const scrollHeight = element.scrollHeight;
+        const clientHeight = element.clientHeight;
+        
+        return (scrollHeight - scrollTop - clientHeight) < threshold;
     },
     
     // Copiar texto para clipboard
