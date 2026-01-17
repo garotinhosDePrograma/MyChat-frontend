@@ -1,10 +1,5 @@
 // Dashboard Logic - VERSÃO CORRIGIDA
 
-// Verificar autenticação
-if (!Storage.isAuthenticated()) {
-    window.location.href = 'login.html';
-}
-
 // Estado global
 const state = {
     currentUser: Storage.getUser(),
@@ -35,6 +30,25 @@ const elements = {
 // Variáveis globais para controle
 let typingTimeout;
 let eventListenersSetup = false;
+
+(async function() {
+    const isAuth = await Storage.requireAuth('index.html');
+
+    if (!isAuth) {
+        return;
+    }
+
+    state.currentUser = Storage.getUser();
+
+    if (!state.currentUser) {
+        console.error("Erro: Usuário não encontrado no Storage");
+        Storage.clear();
+        window.location.href = "index.html";
+        return;
+    }
+
+    await init();
+})();
 
 // Inicialização
 async function init() {
