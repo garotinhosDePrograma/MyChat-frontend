@@ -38,7 +38,7 @@ const Storage = {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization:" `Bearer ${getToken()}`
+                    "Authorization:" `Bearer ${Storage.getToken()}`
                 }
             });
 
