@@ -32,28 +32,28 @@ const Storage = {
     },
     
     // Verificar se está autenticado
-    isAuthenticated() {
+    async isAuthenticated() {
         try {
             const res = await fetch(`${CONFIG.API_URL}/verify`, {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
-                    `Authorization: bearer ${getToken()}`
+                    "Authorization:" `Bearer ${getToken()}`
                 }
             });
 
-            const data = res.json();
+            const data = await res.json();
 
             if (res.ok) {
                 console.log("Token válido");
                 return true;
             } else {
-                console.error("Token inválido");
+                console.error("Token inválido: ", data.error || "Token inválido");
                 window.location.href = "index.html";
                 return false;
             }
         } catch (error) {
-            console.error(data.error || "Erro ao verificar autenticação");
+            console.error("Erro ao verificar autenticação");
         }
     },
     
