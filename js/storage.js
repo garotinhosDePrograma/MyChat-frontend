@@ -35,7 +35,7 @@ const Storage = {
     async isAuthenticated() {
         const token = this.getToken();
         try {
-            const res = await fetch(`${CONFIG.API_URL}/verify`, {
+            const res = await fetch(`${CONFIG.API_URL}${CONFIG.VERIFY}`, {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
