@@ -33,12 +33,13 @@ const Storage = {
     
     // Verificar se está autenticado
     async isAuthenticated() {
+        const token = this.getToken();
         try {
             const res = await fetch(`${CONFIG.API_URL}/verify`, {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization:" `Bearer ${Storage.getToken()}`
+                    "Authorization": `Bearer ${token)}`
                 }
             });
 
@@ -49,6 +50,7 @@ const Storage = {
                 return true;
             } else {
                 console.error("Token inválido: ", data.error || "Token inválido");
+                this.clear();
                 window.location.href = "index.html";
                 return false;
             }
