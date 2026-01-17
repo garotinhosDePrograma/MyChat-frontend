@@ -1,4 +1,4 @@
-// Dashboard Logic - VERSÃO CORRIGIDA
+// Dashboard Logic - VERSÃO CORRIGIDA (BUGS FIXADOS)
 
 // Estado global
 const state = {
@@ -56,7 +56,6 @@ async function init() {
     setupEventListeners();
     await loadContacts();
     
-    // CORRIGIDO: Verificar se socketManager existe
     const token = Storage.getToken();
     if (token && typeof socketManager !== 'undefined') {
         socketManager.connect(token);
@@ -66,7 +65,7 @@ async function init() {
     }
 }
 
-// Configurar handlers do WebSocket - CORRIGIDO
+// Configurar handlers do WebSocket
 function setupSocketHandlers() {
     if (typeof socketManager === 'undefined') {
         console.warn('SocketManager não disponível');
@@ -120,34 +119,27 @@ function setupSocketHandlers() {
     });
 }
 
-// Event Listeners - CORRIGIDO: prevenir setup duplo
+// Event Listeners
 function setupEventListeners() {
     if (eventListenersSetup) return;
     eventListenersSetup = true;
 
-    // Logout
     elements.logoutBtn?.addEventListener('click', handleLogout);
-    
-    // Menu do usuário
     elements.userMenuBtn?.addEventListener('click', toggleUserMenu);
     
-    // Fechar menu ao clicar fora
     document.addEventListener('click', (e) => {
         if (state.userMenuOpen && !e.target.closest('.user-menu')) {
             closeUserMenu();
         }
     });
     
-    // Enviar mensagem
     elements.chatForm?.addEventListener('submit', handleSendMessage);
     
-    // Auto-resize do textarea + digitação
     elements.chatInput?.addEventListener('input', () => {
         autoResizeTextarea();
         handleTypingIndicator();
     });
     
-    // Enter para enviar (Shift+Enter para quebra de linha)
     elements.chatInput?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -155,23 +147,19 @@ function setupEventListeners() {
         }
     });
     
-    // Adicionar contato
     elements.addContactBtn?.addEventListener('click', openAddContactModal);
     elements.closeModal?.addEventListener('click', closeAddContactModal);
     
-    // Fechar modal ao clicar fora
     elements.modal?.addEventListener('click', (e) => {
         if (e.target === elements.modal) {
             closeAddContactModal();
         }
     });
     
-    // Buscar usuários (com debounce)
     elements.searchInput?.addEventListener('input', 
         Utils.debounce(handleSearchUsers, 500)
     );
 
-    // Listener de resize para ajustes responsivos
     window.addEventListener('resize', Utils.debounce(() => {
         const backBtn = document.getElementById('back-btn');
         if (backBtn) {
@@ -238,7 +226,6 @@ function renderContacts() {
         </div>
     `).join('');
     
-    // Adicionar event listeners
     document.querySelectorAll('.contact-item').forEach(item => {
         item.addEventListener('click', () => {
             const contactId = parseInt(item.dataset.contactId);
@@ -247,18 +234,16 @@ function renderContacts() {
     });
 }
 
-// Selecionar contato - CORRIGIDO
+// Selecionar contato
 function selectContact(contactUserId) {
     const contact = state.contacts.find(c => c.contact_user_id === contactUserId);
     if (!contact) return;
     
-    // Limpar timeout de digitação anterior
     if (typingTimeout) {
         clearTimeout(typingTimeout);
         typingTimeout = null;
     }
     
-    // Parar indicador de digitação da conversa anterior
     if (state.selectedContact && typeof socketManager !== 'undefined') {
         socketManager.stopTyping(state.selectedContact.contact_user_id);
     }
@@ -267,13 +252,11 @@ function selectContact(contactUserId) {
     renderContacts();
     loadConversation(contactUserId);
     
-    // Entrar na sala da conversa
     if (typeof socketManager !== 'undefined' && socketManager.connected) {
         socketManager.joinConversation(contactUserId);
         socketManager.markAsRead(contactUserId);
     }
     
-    // Mostrar chat area
     if (elements.chatArea) {
         elements.chatArea.style.display = 'flex';
     }
@@ -281,7 +264,6 @@ function selectContact(contactUserId) {
         elements.emptyState.style.display = 'none';
     }
     
-    // Atualizar header do chat
     const chatHeaderName = document.getElementById('chat-header-name');
     const chatHeaderAvatar = document.getElementById('chat-header-avatar');
     
@@ -293,7 +275,6 @@ function selectContact(contactUserId) {
         chatHeaderAvatar.textContent = getInitials(contact.contact_name || contact.user_name);
     }
     
-    // Em mobile, esconder sidebar
     if (window.innerWidth <= 768) {
         document.querySelector('.sidebar')?.classList.add('hidden');
     }
@@ -301,7 +282,7 @@ function selectContact(contactUserId) {
 
 const conversationCache = new Map();
 
-// Carregar conversa - CORRIGIDO
+// ✅ FIX: Corrigido nome da variável de 'erro' para 'error'
 async function loadConversation(contactUserId) {
     try {
         const cached = conversationCache.get(contactUserId);
@@ -327,7 +308,7 @@ async function loadConversation(contactUserId) {
                 elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
             }
         }, 100);
-    } catch (erro) {
+    } catch (error) { // ✅ FIX: era 'erro'
         console.error("Erro ao carregar conversas:", error);
         Utils.showToast("Erro ao carregar mensagens", "error");
     }
@@ -361,11 +342,9 @@ function updateContactListOnNewMessage(message) {
     if (contactIndex !== -1) {
         const contact = state.contacts[contactIndex];
         
-        // Atualizar última mensagem
         contact.last_message = message.content;
         contact.last_message_time = message.created_at;
         
-        // Mover para o topo
         state.contacts.splice(contactIndex, 1);
         state.contacts.unshift(contact);
         
@@ -373,11 +352,11 @@ function updateContactListOnNewMessage(message) {
     }
 }
 
-// Renderizar mensagens - CORRIGIDO
+// ✅ FIX: Corrigido wasAtButton para wasAtBottom
 function renderMessages() {
     if (!elements.chatMessages) return;
 
-    const wasAtButton = Utils.isScrolledToBottom(elements.chatMessages, 100);
+    const wasAtBottom = Utils.isScrolledToBottom(elements.chatMessages, 100); // ✅ FIX
 
     elements.chatMessages.innerHTML = state.messages.map(msg => {
         const isSent = msg.sender_id === state.currentUser.id;
@@ -410,7 +389,7 @@ function renderMessages() {
         `;
     }).join('');
 
-    if (wasAtButton || state.messages.length <= 10) {
+    if (wasAtBottom || state.messages.length <= 10) { // ✅ FIX
         setTimeout(() => {
             Utils.scrollToBottom(elements.chatMessages, 'auto');
         }, 50);
@@ -430,7 +409,7 @@ async function retryMessage(messageId) {
     await handleSendMessage({ preventDefault: () => {} });
 }
 
-// Enviar mensagem - CORRIGIDO
+// ✅ FIX: Corrigido state.message para state.messages
 async function handleSendMessage(e) {
     e.preventDefault();
 
@@ -446,12 +425,12 @@ async function handleSendMessage(e) {
         receiver_id: state.selectedContact.contact_user_id,
         content: content,
         is_read: false,
-        created_at: new Date.toISOString(),
+        created_at: new Date().toISOString(),
         status: 'sending',
         isOptimistic: true
     };
 
-    state.message.push(optimisticMessage);
+    state.messages.push(optimisticMessage); // ✅ FIX: era state.message
     state.pendingMessages.set(tempId, optimisticMessage);
 
     renderMessages();
@@ -510,12 +489,12 @@ async function handleSendMessage(e) {
 function sendMessageViaWebSocket(receiverId, content, tempId) {
     return new Promise((resolve, reject) => {
         if (!socketManager || !socketManager.connected) {
-            reject(new Error('Web Socket não conectado'));
+            reject(new Error('WebSocket não conectado'));
             return;
         }
 
         const timeout = setTimeout(() => {
-            reject(new Error('timeout ao enviar mensagem'));
+            reject(new Error('Timeout ao enviar mensagem'));
         }, 5000);
 
         const listener = (data) => {
@@ -536,20 +515,15 @@ function sendMessageViaWebSocket(receiverId, content, tempId) {
     });
 }
 
-// Auto-resize do textarea - CORRIGIDO
 function autoResizeTextarea() {
     const textarea = elements.chatInput;
     if (!textarea) return;
     
-    // Reset height para calcular corretamente
     textarea.style.height = 'auto';
-    
-    // Calcular nova altura
     const newHeight = Math.min(textarea.scrollHeight, 120);
     textarea.style.height = newHeight + 'px';
 }
 
-// Handler de indicador de digitação - CORRIGIDO
 function handleTypingIndicator() {
     if (!state.selectedContact) return;
     if (typeof socketManager === 'undefined' || !socketManager.connected) return;
@@ -559,19 +533,16 @@ function handleTypingIndicator() {
     if (content) {
         socketManager.startTyping(state.selectedContact.contact_user_id);
         
-        // Auto-parar após 3 segundos
         clearTimeout(typingTimeout);
         typingTimeout = setTimeout(() => {
             socketManager.stopTyping(state.selectedContact.contact_user_id);
         }, 3000);
     } else {
-        // CORRIGIDO: Parar imediatamente se apagar tudo
         clearTimeout(typingTimeout);
         socketManager.stopTyping(state.selectedContact.contact_user_id);
     }
 }
 
-// Mostrar/esconder indicador de digitação
 function showTypingIndicator(userName) {
     const indicator = document.getElementById('typing-indicator');
     if (indicator) {
@@ -586,7 +557,6 @@ function hideTypingIndicator() {
     }
 }
 
-// Atualizar status online/offline
 function updateContactStatus(userId, isOnline) {
     const contactItem = document.querySelector(`[data-contact-id="${userId}"]`);
     if (contactItem) {
@@ -598,7 +568,6 @@ function updateContactStatus(userId, isOnline) {
     }
 }
 
-// Toggle user menu
 function toggleUserMenu() {
     state.userMenuOpen = !state.userMenuOpen;
     if (elements.userMenuDropdown) {
@@ -613,9 +582,7 @@ function closeUserMenu() {
     }
 }
 
-// Logout - CORRIGIDO
 function handleLogout() {
-    // Desconectar WebSocket
     if (typeof socketManager !== 'undefined') {
         socketManager.disconnect();
     }
@@ -624,7 +591,6 @@ function handleLogout() {
     window.location.href = 'index.html';
 }
 
-// Modal de adicionar contato - CORRIGIDO
 function openAddContactModal() {
     if (elements.modal) {
         elements.modal.classList.remove('hidden');
@@ -632,7 +598,6 @@ function openAddContactModal() {
         elements.searchInput.value = '';
         elements.searchResults.innerHTML = '';
         
-        // Focus com delay para mobile
         setTimeout(() => {
             elements.searchInput.focus();
         }, 300);
@@ -646,7 +611,6 @@ function closeAddContactModal() {
     }
 }
 
-// Buscar usuários
 async function handleSearchUsers(e) {
     const query = e.target.value.trim();
     
@@ -664,7 +628,6 @@ async function handleSearchUsers(e) {
     }
 }
 
-// Renderizar resultados da busca
 function renderSearchResults(users) {
     if (users.length === 0) {
         elements.searchResults.innerHTML = '<p class="text-muted text-center">Nenhum usuário encontrado</p>';
@@ -684,7 +647,7 @@ function renderSearchResults(users) {
     `).join('');
 }
 
-// Adicionar contato
+// ✅ FIX: Corrigido data.message para error.message
 async function addContact(userId, name) {
     try {
         const tempId = `temp_${Date.now()}`;
@@ -709,7 +672,7 @@ async function addContact(userId, name) {
         if (index !== -1) {
             state.contacts[index] = {
                 ...response.data.contact,
-                contact_id: response.data.contact_id
+                contact_id: response.data.contact.id
             };
             renderContacts();
         }
@@ -721,7 +684,7 @@ async function addContact(userId, name) {
         renderContacts();
 
         console.error("Erro ao adicionar contato:", error);
-        Utils.showToast(data.message || "Erro ao adicionar contato", "error");
+        Utils.showToast(error.message || "Erro ao adicionar contato", "error"); // ✅ FIX: era data.message
     }
 }
 
@@ -751,7 +714,7 @@ const statusStyles = `
     animation: shake 0.5s;
 }
 
-message.sending {
+.message.sending {
     opacity: 0.7;
 }
 
@@ -780,7 +743,6 @@ if (!document.getElementById('message-status-styles')) {
     document.head.appendChild(style);
 }
 
-// Obter iniciais do nome
 function getInitials(name) {
     return name
         .split(' ')
@@ -790,9 +752,7 @@ function getInitials(name) {
         .substring(0, 2);
 }
 
-// Fix para iOS Safari
 if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-    // Prevenir zoom no focus do input
     const inputs = document.querySelectorAll('input, textarea');
     inputs.forEach(input => {
         input.addEventListener('focus', () => {
@@ -800,7 +760,6 @@ if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
         });
     });
     
-    // Fix para teclado que cobre o input
     window.addEventListener('resize', () => {
         if (document.activeElement.tagName === 'INPUT' || 
             document.activeElement.tagName === 'TEXTAREA') {
@@ -813,6 +772,3 @@ if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
         }
     });
 }
-
-// Iniciar aplicação
-init();
