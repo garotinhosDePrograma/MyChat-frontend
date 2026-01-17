@@ -1,9 +1,9 @@
 // Lógica de autenticação (Login e Register)
 
 // Verificar se já está autenticado
-if (Storage.isAuthenticated()) {
-    window.location.href = 'dashboard.html';
-}
+(async function() {
+    await Storage.redirectIfAuthenticated();
+})();
 
 // Função de registro
 async function handleRegister(e) {
