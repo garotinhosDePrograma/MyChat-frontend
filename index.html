@@ -119,15 +119,10 @@
     </footer>
 
     <!-- Scripts -->
+    <script src="js/auth.js"></script>
     <script src="js/config.js"></script>
     <script src="js/storage.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/sw-register.js"></script>
-    <script>
-        // Redireciona para dashboard se já estiver autenticado
-        if (Storage.isAuthenticated()) {
-            window.location.href = 'dashboard.html';
-        }
-    </script>
 </body>
 </html>
