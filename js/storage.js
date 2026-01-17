@@ -34,6 +34,11 @@ const Storage = {
     // Verificar se está autenticado
     async isAuthenticated() {
         const token = this.getToken();
+        if (!token) {
+            window.location.href = "index.html";
+            return false;
+        }
+        
         try {
             const res = await fetch(`${CONFIG.API_URL}${CONFIG.VERIFY}`, {
                 method: "GET",
