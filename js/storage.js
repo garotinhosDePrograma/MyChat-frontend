@@ -1,4 +1,4 @@
-// Gerenciamento de armazenamento local
+// Gerenciamento de armazenamento local - VERSÃO CORRIGIDA
 const Storage = {
     // Salvar token
     setToken(token) {
@@ -31,37 +31,68 @@ const Storage = {
         localStorage.removeItem(CONFIG.STORAGE_KEYS.USER);
     },
     
-    // Verificar se está autenticado
+    // Verificar se está autenticado (VERSÃO CORRIGIDA)
     async isAuthenticated() {
         const token = this.getToken();
+        
+        // Se não tem token, não está autenticado
         if (!token) {
-            window.location.href = "index.html";
             return false;
         }
         
         try {
-            const res = await fetch(`${CONFIG.API_URL}${CONFIG.VERIFY}`, {
-                method: "GET",
+            // CORRIGIDO: Usar CONFIG.ENDPOINTS.VERIFY
+            const response = await fetch(`${CONFIG.API_URL}${CONFIG.ENDPOINTS.VERIFY}`, {
+                method: 'GET',
                 headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 }
             });
 
-            const data = await res.json();
+            const data = await response.json();
 
-            if (res.ok) {
-                console.log("Token válido");
+            if (response.ok) {
+                console.log('✅ Token válido');
                 return true;
             } else {
-                console.error("Token inválido: ", data.error || "Token inválido");
+                console.error('❌ Token inválido:', data.message || 'Token inválido');
+                // Limpar dados inválidos
                 this.clear();
-                window.location.href = "index.html";
                 return false;
             }
         } catch (error) {
-            console.error("Erro ao verificar autenticação");
+            console.error('❌ Erro ao verificar autenticação:', error);
+            // Em caso de erro de rede, considerar ainda autenticado
+            // (o token pode ser válido, só está sem conexão)
+            return true;
         }
+    },
+    
+    // Verificar e redirecionar se necessário (helper para páginas protegidas)
+    async requireAuth(redirectTo = 'index.html') {
+        const isAuth = await this.isAuthenticated();
+        
+        if (!isAuth) {
+            console.log('🔒 Não autenticado, redirecionando...');
+            window.location.href = redirectTo;
+            return false;
+        }
+        
+        return true;
+    },
+    
+    // Verificar e redirecionar se JÁ estiver autenticado (para login/register)
+    async redirectIfAuthenticated(redirectTo = 'dashboard.html') {
+        const isAuth = await this.isAuthenticated();
+        
+        if (isAuth) {
+            console.log('✅ Já autenticado, redirecionando para dashboard...');
+            window.location.href = redirectTo;
+            return true;
+        }
+        
+        return false;
     },
     
     // Limpar tudo (logout)
