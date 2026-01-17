@@ -6,6 +6,7 @@ const state = {
     contacts: [],
     selectedContact: null,
     messages: [],
+    pendingMessages: new Map(),
     userMenuOpen: false
 };
 
@@ -298,102 +299,241 @@ function selectContact(contactUserId) {
     }
 }
 
+const conversationCache = new Map();
+
 // Carregar conversa - CORRIGIDO
 async function loadConversation(contactUserId) {
     try {
+        const cached = conversationCache.get(contactUserId);
+        if (cached) {
+            state.messages = [...cached];
+            renderMessages();
+            setTimeout(() => {
+                Utils.scrollToBottom(elements.chatMessages, 'auto');
+            }, 50);
+        } else {
+            showMessagesLoading();
+        }
+
         const response = await API.getConversation(contactUserId);
-        state.messages = response.data.messages.reverse();
+        const serverMessages = response.data.messages.reverse();
+
+        conversationCache.set(contactUserId, serverMessages);
+        state.messages = serverMessages;
         renderMessages();
-        
-        // CORRIGIDO: Garantir scroll no fim
+
         setTimeout(() => {
             if (elements.chatMessages) {
                 elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
             }
-        }, 150);
+        }, 100);
+    } catch (erro) {
+        console.error("Erro ao carregar conversas:", error);
+        Utils.showToast("Erro ao carregar mensagens", "error");
+    }
+}
+
+function showMessagesLoading() {
+    if (!elements.chatMessages) return;
+
+    const skeletons = Array(8).fill(0).map((_, i) => {
+        const isSent = i % 2 === 0;
+        return `
+            <div class="message ${isSent ? 'sent': 'received'}">
+                <div class="skeleton" style="
+                    width: ${60 + Math.random() * 30}%;
+                    height: 40px;
+                    border-radius: 18px;
+                "></div>
+            </div>
+        `;
+    }).join('');
+
+    elements.chatMessages.innerHTML = skeletons;
+}
+
+function updateContactListOnNewMessage(message) {
+    const contactIndex = state.contacts.findIndex(
+        c => c.contact_user_id === message.sender_id || 
+             c.contact_user_id === message.receiver_id
+    );
+    
+    if (contactIndex !== -1) {
+        const contact = state.contacts[contactIndex];
         
-    } catch (error) {
-        console.error('Erro ao carregar conversa:', error);
-        Utils.showToast('Erro ao carregar mensagens', 'error');
+        // Atualizar última mensagem
+        contact.last_message = message.content;
+        contact.last_message_time = message.created_at;
+        
+        // Mover para o topo
+        state.contacts.splice(contactIndex, 1);
+        state.contacts.unshift(contact);
+        
+        renderContacts();
     }
 }
 
 // Renderizar mensagens - CORRIGIDO
 function renderMessages() {
     if (!elements.chatMessages) return;
-    
-    // Verificar se estava no fim antes de renderizar
-    const wasAtBottom = Utils.isScrolledToBottom(elements.chatMessages, 100);
-    
+
+    const wasAtButton = Utils.isScrolledToBottom(elements.chatMessages, 100);
+
     elements.chatMessages.innerHTML = state.messages.map(msg => {
         const isSent = msg.sender_id === state.currentUser.id;
+
+        let statusIcon = '';
+        if (isSent) {
+            if (msg.status === 'sending') {
+                statusIcon = '<span class="message-status sending">⏳</span>';
+            } else if (msg.status === 'sent') {
+                statusIcon = '<span class="message-status sent">✓</span>';
+            } else if (msg.status === 'delivered') {
+                statusIcon = '<span class="message-status delivered">✓✓</span>';
+            } else if (msg.status === 'error') {
+                statusIcon = '<span class="message-status error" title="Falha. Toque para reenviar.">(!)</span>';
+            }
+        }
+
         return `
-            <div class="message ${isSent ? 'sent' : 'received'}">
+            <div class="message ${isSent ? 'sent' : 'received'} ${msg.status || ''}"
+                data-message-id="${msg.id}"
+                ${msg.status === 'error' ? 'onclick="retryMessage(\'' + msg.id + '\')"' : ''}>
                 <div class="message-bubble">
                     ${Utils.escapeHtml(msg.content)}
                 </div>
                 <div class="message-time">
                     ${Utils.formatDateTime(msg.created_at)}
+                    ${statusIcon}
                 </div>
             </div>
         `;
     }).join('');
-    
-    // CORRIGIDO: Só fazer scroll se estava no fim OU se for primeira carga
-    if (wasAtBottom || state.messages.length <= 10) {
+
+    if (wasAtButton || state.messages.length <= 10) {
         setTimeout(() => {
             Utils.scrollToBottom(elements.chatMessages, 'auto');
-        }, 100);
+        }, 50);
     }
+}
+
+async function retryMessage(messageId) {
+    const message = state.messages.find(m => m.id === messageId);
+    if (!message || message.status !== 'error') return;
+
+    const index = state.messages.indexOf(message);
+    if (index > -1) {
+        state.messages.splice(index, 1);
+    }
+
+    elements.chatInput.value = message.content;
+    await handleSendMessage({ preventDefault: () => {} });
 }
 
 // Enviar mensagem - CORRIGIDO
 async function handleSendMessage(e) {
     e.preventDefault();
-    
+
     if (!state.selectedContact) return;
-    
+
     const content = elements.chatInput.value.trim();
     if (!content) return;
-    
-    // Desabilitar input
-    elements.chatInput.disabled = true;
-    
-    try {
-        // CORRIGIDO: Tentar enviar via WebSocket primeiro
-        let sent = false;
-        if (typeof socketManager !== 'undefined' && socketManager.connected) {
-            sent = socketManager.sendMessage(state.selectedContact.contact_user_id, content);
-        }
-        
-        // CORRIGIDO: Fallback para API REST se WebSocket falhar
-        if (!sent) {
-            await API.sendMessage(state.selectedContact.contact_user_id, content);
-            await loadConversation(state.selectedContact.contact_user_id);
-        }
-        
-        // Limpar input
-        elements.chatInput.value = '';
-        elements.chatInput.style.height = 'auto';
-        
-        // Parar indicador de digitação
-        if (typeof socketManager !== 'undefined') {
-            socketManager.stopTyping(state.selectedContact.contact_user_id);
-        }
-        
-        // Limpar timeout
-        if (typingTimeout) {
-            clearTimeout(typingTimeout);
-            typingTimeout = null;
-        }
-        
-    } catch (error) {
-        console.error('Erro ao enviar mensagem:', error);
-        Utils.showToast('Erro ao enviar mensagem', 'error');
-    } finally {
-        elements.chatInput.disabled = false;
-        elements.chatInput.focus();
+
+    const tempId = `temp_${Date.now()}_${Math.random()}`;
+    const optimisticMessage = {
+        id: tempId,
+        sender_id: state.currentUser.id,
+        receiver_id: state.selectedContact.contact_user_id,
+        content: content,
+        is_read: false,
+        created_at: new Date.toISOString(),
+        status: 'sending',
+        isOptimistic: true
+    };
+
+    state.message.push(optimisticMessage);
+    state.pendingMessages.set(tempId, optimisticMessage);
+
+    renderMessages();
+    Utils.scrollToBottom(elements.chatMessages, 'auto');
+
+    elements.chatInput.value = '';
+    elements.chatInput.style.height = 'auto';
+    elements.chatInput.disabled = false;
+    elements.chatInput.focus();
+
+    if (typeof socketManager !== 'undefined') {
+        socketManager.stopTyping(state.selectedContact.contact_user_id);
     }
+
+    try {
+        let serverMessage = null;
+
+        if (typeof socketManager !== 'undefined' && socketManager.connected) {
+            serverMessage = await sendMessageViaWebSocket(
+                state.selectedContact.contact_user_id,
+                content,
+                tempId
+            );
+        }
+
+        if (!serverMessage) {
+            const response = await API.sendMessage(
+                state.selectedContact.contact_user_id,
+                content
+            );
+            serverMessage = response.data.message;
+        }
+
+        const index = state.messages.findIndex(m => m.id === tempId);
+        if (index !== -1) {
+            state.messages[index] = {
+                ...serverMessage,
+                status: 'sent'
+            };
+            state.pendingMessages.delete(tempId);
+            renderMessages();
+        }
+    } catch (error) {
+        console.error("Erro ao enviar mensagem:", error);
+
+        const index = state.messages.findIndex(m => m.id === tempId);
+        if (index !== -1) {
+            state.messages[index].status = 'error';
+            renderMessages();
+        }
+
+        Utils.showToast("Erro ao enviar. Toque para reenviar.", "error", 5000);
+    }
+}
+
+function sendMessageViaWebSocket(receiverId, content, tempId) {
+    return new Promise((resolve, reject) => {
+        if (!socketManager || !socketManager.connected) {
+            reject(new Error('Web Socket não conectado'));
+            return;
+        }
+
+        const timeout = setTimeout(() => {
+            reject(new Error('timeout ao enviar mensagem'));
+        }, 5000);
+
+        const listener = (data) => {
+            if (data.temp_id === tempId) {
+                clearTimeout(timeout);
+                socketManager.off('message_confirmed', listener);
+                resolve(data.message);
+            }
+        };
+
+        socketManager.on('message_confirmed', listener);
+
+        socketManager.socket.emit('send_message', {
+            receiver_id: receiverId,
+            content: content,
+            temp_id: tempId
+        });
+    });
 }
 
 // Auto-resize do textarea - CORRIGIDO
@@ -547,14 +687,97 @@ function renderSearchResults(users) {
 // Adicionar contato
 async function addContact(userId, name) {
     try {
-        await API.addContact(userId, name);
-        Utils.showToast('Contato adicionado com sucesso!', 'success');
+        const tempId = `temp_${Date.now()}`;
+        const optimisticContact = {
+            contact_id: tempId,
+            contact_user_id: userId,
+            contact_name: name,
+            user_name: name,
+            user_email: '',
+            last_message: null,
+            last_message_time: null,
+            unread_count: 0,
+            isOptimistic: true
+        };
+
+        state.contacts.unshift(optimisticContact);
+        renderContacts();
+
+        const response = await API.addContact(userId, name);
+
+        const index = state.contacts.findIndex(c => c.contact_id === tempId);
+        if (index !== -1) {
+            state.contacts[index] = {
+                ...response.data.contact,
+                contact_id: response.data.contact_id
+            };
+            renderContacts();
+        }
+
+        Utils.showToast("Contato adicionado!", "success");
         closeAddContactModal();
-        await loadContacts();
     } catch (error) {
-        console.error('Erro ao adicionar contato:', error);
-        Utils.showToast(error.message || 'Erro ao adicionar contato', 'error');
+        state.contacts = state.contacts.filter(c => c.contact_id !== tempId);
+        renderContacts();
+
+        console.error("Erro ao adicionar contato:", error);
+        Utils.showToast(data.message || "Erro ao adicionar contato", "error");
     }
+}
+
+const statusStyles = `
+<style>
+.message-status {
+    font-size: 12px;
+    margin-left: 4px;
+}
+
+.message-status.sending {
+    opacity: 0.6;
+    animation: pulse 1.5s infinite;
+}
+
+.message-status.sent {
+    color: var(--text-light);
+}
+
+.message-status.delivered {
+    color: var(--primary-color);
+}
+
+.message-status.error {
+    color: var(--danger-color);
+    cursor: pointer;
+    animation: shake 0.5s;
+}
+
+message.sending {
+    opacity: 0.7;
+}
+
+.message.error {
+    border-left: 3px solid var(--danger-color);
+    cursor: pointer;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+</style>
+`;
+
+if (!document.getElementById('message-status-styles')) {
+    const style = document.createElement('style');
+    style.id = 'message-status-styles';
+    style.textContent = statusStyles;
+    document.head.appendChild(style);
 }
 
 // Obter iniciais do nome
