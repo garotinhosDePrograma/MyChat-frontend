@@ -452,28 +452,45 @@ function renderMessages() {
 }
 
 async function retryMessage(messageId) {
+    console.log("Tentando reenviar mensagem:", messageId);
+    
     const message = state.messages.find(m => m.id === messageId);
-    if (!message || message.status !== 'error') return;
+    if (!message || message.status !== 'error') {
+        console.warn("Mensagem não encontrada ou não está com erro.");
+        return;
+    }
 
     const index = state.messages.indexOf(message);
     if (index > -1) {
         state.messages.splice(index, 1);
+        renderMessages();
     }
 
     elements.chatInput.value = message.content;
+    elements.chatInput.focus();
+    
     await handleSendMessage({ preventDefault: () => {} });
 }
 
 // ✅ FIX: Corrigido state.message para state.messages
-async function handleSendMessage(e) {
+
+function handleSendMessage(e) {
     e.preventDefault();
 
-    if (!state.selectedContact) return;
+    if (!state.selectedContact) {
+        console.warn('Nenhum contato selecionado');
+        return;
+    }
 
     const content = elements.chatInput.value.trim();
-    if (!content) return;
+    if (!content) {
+        console.warn('Mensagem vazia');
+        return;
+    }
 
     const tempId = `temp_${Date.now()}_${Math.random()}`;
+    
+    // ✅ Mensagem otimista
     const optimisticMessage = {
         id: tempId,
         sender_id: state.currentUser.id,
@@ -485,40 +502,60 @@ async function handleSendMessage(e) {
         isOptimistic: true
     };
 
-    state.messages.push(optimisticMessage); // ✅ FIX: era state.message
+    state.messages.push(optimisticMessage);
     state.pendingMessages.set(tempId, optimisticMessage);
 
     renderMessages();
     Utils.scrollToBottom(elements.chatMessages, 'auto');
 
+    // Limpar input
     elements.chatInput.value = '';
     elements.chatInput.style.height = 'auto';
     elements.chatInput.disabled = false;
     elements.chatInput.focus();
 
+    // Parar indicador de digitação
     if (typeof socketManager !== 'undefined') {
         socketManager.stopTyping(state.selectedContact.contact_user_id);
     }
 
-    try {
-        let serverMessage = null;
+    let serverMessage = null;
 
+    try {
+        console.log('📤 Enviando mensagem...');
+        
+        // ✅ CORREÇÃO PRINCIPAL: Tentar WebSocket primeiro
         if (typeof socketManager !== 'undefined' && socketManager.connected) {
-            serverMessage = await sendMessageViaWebSocket(
-                state.selectedContact.contact_user_id,
-                content,
-                tempId
-            );
+            console.log('🔌 Usando WebSocket...');
+            
+            try {
+                // ✅ Agora sendMessage retorna Promise
+                serverMessage = await socketManager.sendMessage(
+                    state.selectedContact.contact_user_id,
+                    content,
+                    tempId
+                );
+                
+                console.log('✅ Mensagem confirmada via WebSocket:', serverMessage);
+            } catch (wsError) {
+                console.warn('⚠️ WebSocket falhou, tentando API REST...', wsError);
+                serverMessage = null; // Vai cair no fallback abaixo
+            }
         }
 
         if (!serverMessage) {
+            console.log('📡 Usando API REST...');
+            
             const response = await API.sendMessage(
                 state.selectedContact.contact_user_id,
                 content
             );
+            
             serverMessage = response.data.message;
+            console.log('✅ Mensagem confirmada via API REST:', serverMessage);
         }
 
+        // ✅ Atualizar mensagem otimista com dados reais do servidor
         const index = state.messages.findIndex(m => m.id === tempId);
         if (index !== -1) {
             state.messages[index] = {
@@ -527,9 +564,13 @@ async function handleSendMessage(e) {
             };
             state.pendingMessages.delete(tempId);
             renderMessages();
+            
+            console.log('✅ Mensagem atualizada na UI');
         }
+
+        updateContactListOnNewMessage(serverMessage);
     } catch (error) {
-        console.error("Erro ao enviar mensagem:", error);
+        console.error("ERRO ao enviar mensagem:", error);
 
         const index = state.messages.findIndex(m => m.id === tempId);
         if (index !== -1) {
@@ -540,7 +581,7 @@ async function handleSendMessage(e) {
         Utils.showToast("Erro ao enviar. Toque para reenviar.", "error", 5000);
     }
 }
-
+    
 function sendMessageViaWebSocket(receiverId, content, tempId) {
     return new Promise((resolve, reject) => {
         if (!socketManager || !socketManager.connected) {
