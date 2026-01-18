@@ -1,4 +1,4 @@
-// Service Worker para MyChat PWA
+// Service Worker para MyChat PWA - COM NOTIFICAÇÕES
 const CACHE_NAME = 'mychat-v1';
 const OFFLINE_URL = '/index.html';
 
@@ -19,6 +19,8 @@ const FILES_TO_CACHE = [
     '/js/api.js',
     '/js/auth.js',
     '/js/dashboard.js',
+    '/js/notification.js',
+    '/js/socket.js',
     '/manifest.json'
 ];
 
@@ -56,10 +58,8 @@ self.addEventListener('activate', (event) => {
 
 // Interceptar requisições
 self.addEventListener('fetch', (event) => {
-    // Ignorar requisições que não são GET
     if (event.request.method !== 'GET') return;
     
-    // Ignorar requisições para a API (sempre buscar da rede)
     if (event.request.url.includes('/api/')) {
         event.respondWith(
             fetch(event.request).catch(() => {
@@ -78,14 +78,11 @@ self.addEventListener('fetch', (event) => {
         return;
     }
     
-    // Estratégia: Network First, fallback para Cache
     event.respondWith(
         fetch(event.request)
             .then((response) => {
-                // Clonar a resposta
                 const responseToCache = response.clone();
                 
-                // Atualizar o cache com a nova resposta
                 caches.open(CACHE_NAME).then((cache) => {
                     cache.put(event.request, responseToCache);
                 });
@@ -93,13 +90,11 @@ self.addEventListener('fetch', (event) => {
                 return response;
             })
             .catch(() => {
-                // Se falhar, buscar do cache
                 return caches.match(event.request).then((response) => {
                     if (response) {
                         return response;
                     }
                     
-                    // Se não tiver no cache, retornar página offline
                     if (event.request.mode === 'navigate') {
                         return caches.match(OFFLINE_URL);
                     }
@@ -113,7 +108,47 @@ self.addEventListener('fetch', (event) => {
     );
 });
 
-// Sincronização em background (para mensagens pendentes)
+// ✅ CLIQUE NA NOTIFICAÇÃO - CRUCIAL PARA PWA
+self.addEventListener('notificationclick', (event) => {
+    console.log('[ServiceWorker] 🖱️ Notificação clicada:', event);
+    
+    event.notification.close();
+    
+    // Obter dados da notificação
+    const notificationData = event.notification.data || {};
+    
+    event.waitUntil(
+        clients.matchAll({
+            type: 'window',
+            includeUncontrolled: true
+        }).then((clientList) => {
+            // Se já existe janela aberta, focar nela
+            for (let i = 0; i < clientList.length; i++) {
+                const client = clientList[i];
+                if (client.url.includes('dashboard.html')) {
+                    // Enviar mensagem para abrir a conversa
+                    if (notificationData.senderId) {
+                        client.postMessage({
+                            type: 'OPEN_CONVERSATION',
+                            senderId: notificationData.senderId
+                        });
+                    }
+                    return client.focus();
+                }
+            }
+            
+            // Se não existe, abrir nova janela
+            let url = '/dashboard.html';
+            if (notificationData.senderId) {
+                url += `?open=${notificationData.senderId}`;
+            }
+            
+            return clients.openWindow(url);
+        })
+    );
+});
+
+// Sincronização em background
 self.addEventListener('sync', (event) => {
     console.log('[ServiceWorker] Sincronização em background:', event.tag);
     
@@ -123,50 +158,38 @@ self.addEventListener('sync', (event) => {
 });
 
 async function syncMessages() {
-    // Aqui você pode implementar lógica para enviar mensagens pendentes
-    // quando a conexão for restaurada
     console.log('[ServiceWorker] Sincronizando mensagens pendentes...');
 }
 
-// Notificações Push (preparado para futuro)
+// ✅ NOTIFICAÇÕES PUSH (opcional para futuro)
 self.addEventListener('push', (event) => {
-    console.log('[ServiceWorker] Push recebido:', event);
+    console.log('[ServiceWorker] 📨 Push recebido:', event);
+    
+    let data = {};
+    if (event.data) {
+        try {
+            data = event.data.json();
+        } catch (e) {
+            data = { body: event.data.text() };
+        }
+    }
     
     const options = {
-        body: event.data ? event.data.text() : 'Nova mensagem no MyChat',
-        icon: '/assets/icons/icon-192.png',
+        body: data.body || 'Nova mensagem no MyChat',
+        icon: data.icon || '/assets/icons/icon-192.png',
         badge: '/assets/icons/icon-192.png',
         vibrate: [100, 50, 100],
         data: {
             dateOfArrival: Date.now(),
-            primaryKey: 1
+            senderId: data.senderId,
+            messageId: data.messageId,
+            ...data
         },
-        actions: [
-            {
-                action: 'explore',
-                title: 'Ver mensagem'
-            },
-            {
-                action: 'close',
-                title: 'Fechar'
-            }
-        ]
+        tag: data.tag || 'message-notification',
+        requireInteraction: false
     };
     
     event.waitUntil(
-        self.registration.showNotification('MyChat', options)
+        self.registration.showNotification(data.title || 'MyChat', options)
     );
-});
-
-// Clique na notificação
-self.addEventListener('notificationclick', (event) => {
-    console.log('[ServiceWorker] Clique na notificação:', event);
-    
-    event.notification.close();
-    
-    if (event.action === 'explore') {
-        event.waitUntil(
-            clients.openWindow('/dashboard.html')
-        );
-    }
 });
