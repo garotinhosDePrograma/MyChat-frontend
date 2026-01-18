@@ -474,7 +474,7 @@ async function retryMessage(messageId) {
 
 // ✅ FIX: Corrigido state.message para state.messages
 
-function handleSendMessage(e) {
+async function handleSendMessage(e) {
     e.preventDefault();
 
     if (!state.selectedContact) {
