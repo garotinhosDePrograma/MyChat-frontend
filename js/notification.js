@@ -1,11 +1,12 @@
-// Notification Manager - VERSÃO CORRIGIDA
+// Notification Manager - VERSÃO PWA CORRIGIDA
 class NotificationManager {
     constructor() {
         this.permission = 'default';
-        this.isSupported = 'Notification' in window;
+        this.isSupported = 'Notification' in window && 'serviceWorker' in navigator;
         this.enabled = false;
         this.soundEnabled = true;
         this.notificationSound = null;
+        this.serviceWorkerReady = false;
 
         this.init();
     }
@@ -18,6 +19,17 @@ class NotificationManager {
 
         this.permission = Notification.permission;
         this.enabled = this.permission === 'granted';
+
+        // Aguardar Service Worker estar pronto
+        if ('serviceWorker' in navigator) {
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                this.serviceWorkerReady = true;
+                console.log("✅ Service Worker pronto para notificações");
+            } catch (error) {
+                console.error("❌ Erro ao aguardar Service Worker:", error);
+            }
+        }
 
         // Carregar configurações salvas
         const savedConfig = localStorage.getItem('notification_config');
@@ -34,6 +46,7 @@ class NotificationManager {
 
         console.log(`🔔 Notificações: ${this.enabled ? 'ATIVADAS ✅' : 'DESATIVADAS ❌'}`);
         console.log(`🔊 Som: ${this.soundEnabled ? 'ATIVADO ✅' : 'DESATIVADO ❌'}`);
+        console.log(`⚙️ Service Worker: ${this.serviceWorkerReady ? 'PRONTO ✅' : 'NÃO PRONTO ❌'}`);
     }
 
     async requestPermission() {
@@ -59,7 +72,7 @@ class NotificationManager {
 
             if (this.enabled) {
                 console.log("✅ Permissão de notificações CONCEDIDA!");
-                this.showTestNotification();
+                await this.showTestNotification();
                 return true;
             } else {
                 console.log("❌ Usuário negou a permissão");
@@ -78,7 +91,8 @@ class NotificationManager {
         this.notificationSound.volume = 0.5;
     }
 
-    showTestNotification() {
+    // ✅ MÉTODO CORRIGIDO: Usa Service Worker Registration
+    async showTestNotification() {
         if (!this.enabled) {
             console.warn("⚠️ Notificações não estão ativadas");
             return;
@@ -87,40 +101,62 @@ class NotificationManager {
         console.log("📢 Mostrando notificação de teste...");
 
         try {
-            const notification = new Notification("✅ Notificações Ativadas!", {
-                body: "Você receberá notificações de novas mensagens",
-                icon: "/assets/icons/icon-192.png",
-                badge: "/assets/icons/icon-192.png",
-                tag: "test-notification",
-                requireInteraction: false,
-                silent: !this.soundEnabled,
-                timestamp: Date.now()
-            });
+            // ✅ PWA: Usar Service Worker Registration
+            if (this.serviceWorkerReady) {
+                const registration = await navigator.serviceWorker.ready;
+                
+                await registration.showNotification("✅ Notificações Ativadas!", {
+                    body: "Você receberá notificações de novas mensagens",
+                    icon: "/assets/icons/icon-192.png",
+                    badge: "/assets/icons/icon-192.png",
+                    tag: "test-notification",
+                    requireInteraction: false,
+                    silent: !this.soundEnabled,
+                    timestamp: Date.now(),
+                    data: {
+                        type: 'test'
+                    }
+                });
+                
+                console.log("✅ Notificação de teste enviada via Service Worker!");
+            } else {
+                // Fallback: Browser normal (não PWA instalado)
+                const notification = new Notification("✅ Notificações Ativadas!", {
+                    body: "Você receberá notificações de novas mensagens",
+                    icon: "/assets/icons/icon-192.png",
+                    badge: "/assets/icons/icon-192.png",
+                    tag: "test-notification",
+                    requireInteraction: false,
+                    silent: !this.soundEnabled,
+                    timestamp: Date.now()
+                });
+
+                notification.onclick = () => {
+                    window.focus();
+                    notification.close();
+                };
+
+                setTimeout(() => notification.close(), 4000);
+                
+                console.log("✅ Notificação de teste enviada (fallback browser)!");
+            }
 
             if (this.soundEnabled) {
                 this.playSound();
             }
-
-            notification.onclick = () => {
-                window.focus();
-                notification.close();
-            };
-
-            setTimeout(() => notification.close(), 4000);
-            
-            console.log("✅ Notificação de teste enviada!");
         } catch (error) {
             console.error("❌ Erro ao mostrar notificação:", error);
         }
     }
 
-    showMessageNotification(message, senderName, senderAvatar = null) {
+    // ✅ MÉTODO PRINCIPAL CORRIGIDO: Usa Service Worker Registration
+    async showMessageNotification(message, senderName, senderAvatar = null) {
         if (!this.enabled) {
             console.log("⚠️ Notificações desativadas - não enviando notificação");
             return;
         }
 
-        // CORRIGIDO: Verificação mais robusta de janela focada
+        // ✅ Verificação robusta de janela focada
         const isWindowFocused = document.hasFocus();
         const currentState = window.state || {};
         const isChatOpen = currentState.selectedContact?.contact_user_id === message.sender_id;
@@ -145,45 +181,67 @@ class NotificationManager {
             : message.content;
         
         try {
-            const notification = new Notification(`💬 ${senderName}`, {
-                body: body,
-                icon: senderAvatar || "/assets/icons/icon-192.png",
-                badge: "/assets/icons/icon-192.png",
-                tag: `message-${message.sender_id}`, // Agrupa notificações do mesmo remetente
-                requireInteraction: false,
-                silent: !this.soundEnabled,
-                timestamp: Date.now(),
-                data: {
-                    messageId: message.id,
-                    senderId: message.sender_id,
-                    conversationId: message.sender_id
-                }
-            });
+            // ✅ PWA: Usar Service Worker Registration
+            if (this.serviceWorkerReady) {
+                const registration = await navigator.serviceWorker.ready;
+                
+                await registration.showNotification(`💬 ${senderName}`, {
+                    body: body,
+                    icon: senderAvatar || "/assets/icons/icon-192.png",
+                    badge: "/assets/icons/icon-192.png",
+                    tag: `message-${message.sender_id}`,
+                    requireInteraction: false,
+                    silent: !this.soundEnabled,
+                    timestamp: Date.now(),
+                    data: {
+                        messageId: message.id,
+                        senderId: message.sender_id,
+                        conversationId: message.sender_id,
+                        type: 'message'
+                    }
+                });
+                
+                console.log(`✅ Notificação enviada via Service Worker para: ${senderName}`);
+            } else {
+                // Fallback: Browser normal (não PWA instalado)
+                const notification = new Notification(`💬 ${senderName}`, {
+                    body: body,
+                    icon: senderAvatar || "/assets/icons/icon-192.png",
+                    badge: "/assets/icons/icon-192.png",
+                    tag: `message-${message.sender_id}`,
+                    requireInteraction: false,
+                    silent: !this.soundEnabled,
+                    timestamp: Date.now(),
+                    data: {
+                        messageId: message.id,
+                        senderId: message.sender_id,
+                        conversationId: message.sender_id
+                    }
+                });
+
+                notification.onclick = (event) => {
+                    event.preventDefault();
+                    console.log("🖱️ Notificação clicada - abrindo conversa");
+
+                    window.focus();
+
+                    if (typeof selectContact === 'function' && event.target.data.senderId) {
+                        selectContact(event.target.data.senderId);
+                    } else if (window.selectContact && event.target.data.senderId) {
+                        window.selectContact(event.target.data.senderId);
+                    }
+
+                    notification.close();
+                };
+
+                setTimeout(() => notification.close(), 5000);
+                
+                console.log(`✅ Notificação enviada (fallback browser) para: ${senderName}`);
+            }
 
             if (this.soundEnabled) {
                 this.playSound();
             }
-
-            notification.onclick = (event) => {
-                event.preventDefault();
-                console.log("🖱️ Notificação clicada - abrindo conversa");
-
-                window.focus();
-
-                // Selecionar o contato se a função existir
-                if (typeof selectContact === 'function' && event.target.data.senderId) {
-                    selectContact(event.target.data.senderId);
-                } else if (window.selectContact && event.target.data.senderId) {
-                    window.selectContact(event.target.data.senderId);
-                }
-
-                notification.close();
-            };
-
-            // Auto-fechar após 5 segundos
-            setTimeout(() => notification.close(), 5000);
-
-            console.log(`✅ Notificação enviada para: ${senderName}`);
         } catch (error) {
             console.error("❌ Erro ao mostrar notificação:", error);
         }
@@ -240,7 +298,8 @@ class NotificationManager {
             isSupported: this.isSupported,
             permission: this.permission,
             enabled: this.enabled,
-            soundEnabled: this.soundEnabled
+            soundEnabled: this.soundEnabled,
+            serviceWorkerReady: this.serviceWorkerReady
         };
     }
 }
@@ -251,18 +310,19 @@ const notificationManager = new NotificationManager();
 // Expor no window para debug
 window.notificationManager = notificationManager;
 
-// Debug helper
-window.testNotification = () => {
+// Debug helper melhorado
+window.testNotification = async () => {
     console.log("🧪 Testando notificação...");
     console.log("Status:", notificationManager.getStatus());
     
     if (!notificationManager.isEnabled()) {
         console.error("❌ Notificações não estão ativadas!");
-        notificationManager.requestPermission().then(() => {
-            notificationManager.showTestNotification();
-        });
+        const granted = await notificationManager.requestPermission();
+        if (granted) {
+            await notificationManager.showTestNotification();
+        }
     } else {
-        notificationManager.showTestNotification();
+        await notificationManager.showTestNotification();
     }
 };
 
