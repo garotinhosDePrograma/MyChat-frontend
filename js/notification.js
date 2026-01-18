@@ -1,4 +1,4 @@
-// Notification Manager - VERSÃO PWA CORRIGIDA
+// Notification Manager - VERSÃO COM DEBUG COMPLETO
 class NotificationManager {
     constructor() {
         this.permission = 'default';
@@ -7,6 +7,7 @@ class NotificationManager {
         this.soundEnabled = true;
         this.notificationSound = null;
         this.serviceWorkerReady = false;
+        this.notificationsShown = []; // Para debug
 
         this.init();
     }
@@ -31,7 +32,6 @@ class NotificationManager {
             }
         }
 
-        // Carregar configurações salvas
         const savedConfig = localStorage.getItem('notification_config');
         if (savedConfig) {
             try {
@@ -85,13 +85,11 @@ class NotificationManager {
     }
 
     createSoundElement() {
-        // Som de notificação simples
         this.notificationSound = new Audio();
         this.notificationSound.src = "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiDcIF2m98OScTgwOUajk77RgGwU7k9nyw3ElBSl+zPLaizsKDlyx6OynUxQJQpzd8sFuHwU0iNDy04g2Bhltv/HgnE0MDU6m5O+zYBoGPJLY8sJ0JwUofcrx2Ys5CQ1bsufjpVIUB0CZ3fO/bR4ELobP8tmIPAcVbb/u45xNDA1OqOTusmAaBj2S2fHBcyYEKn7J8dmKOAkNW7Xn46VSFQZAmt3zv20eBiuFzvPaiTwHFWu/7uOcTQwNT6fk77NhGwU8k9nxwXMnBil9yfHajDgJDVux5uSlUhYGQJrd8r5sHgYugM/z2og7CBZrvuvjnE4MDlCo5e+zYRsGPJPa8sFtJwUpfM";
         this.notificationSound.volume = 0.5;
     }
 
-    // ✅ MÉTODO CORRIGIDO: Usa Service Worker Registration
     async showTestNotification() {
         if (!this.enabled) {
             console.warn("⚠️ Notificações não estão ativadas");
@@ -101,7 +99,6 @@ class NotificationManager {
         console.log("📢 Mostrando notificação de teste...");
 
         try {
-            // ✅ PWA: Usar Service Worker Registration
             if (this.serviceWorkerReady) {
                 const registration = await navigator.serviceWorker.ready;
                 
@@ -120,7 +117,6 @@ class NotificationManager {
                 
                 console.log("✅ Notificação de teste enviada via Service Worker!");
             } else {
-                // Fallback: Browser normal (não PWA instalado)
                 const notification = new Notification("✅ Notificações Ativadas!", {
                     body: "Você receberá notificações de novas mensagens",
                     icon: "/assets/icons/icon-192.png",
@@ -149,73 +145,102 @@ class NotificationManager {
         }
     }
 
-    // ✅ MÉTODO PRINCIPAL CORRIGIDO: Usa Service Worker Registration
+    // ✅ MÉTODO PRINCIPAL COM DEBUG DETALHADO
     async showMessageNotification(message, senderName, senderAvatar = null) {
+        console.log("═══════════════════════════════════════════");
+        console.log("🔔 showMessageNotification CHAMADO");
+        console.log("═══════════════════════════════════════════");
+        
+        // Debug 1: Verificar se notificações estão habilitadas
+        console.log("1️⃣ Notificações habilitadas?", this.enabled);
         if (!this.enabled) {
-            console.log("⚠️ Notificações desativadas - não enviando notificação");
+            console.error("❌ NOTIFICAÇÕES DESABILITADAS - Não enviando notificação");
+            console.log("Permission:", this.permission);
+            console.log("═══════════════════════════════════════════");
             return;
         }
 
-        // ✅ Verificação robusta de janela focada
+        // Debug 2: Estado da janela
         const isWindowFocused = document.hasFocus();
+        console.log("2️⃣ Janela focada?", isWindowFocused);
+        console.log("   document.hidden:", document.hidden);
+        console.log("   document.visibilityState:", document.visibilityState);
+
+        // Debug 3: Estado da conversa
         const currentState = window.state || {};
         const isChatOpen = currentState.selectedContact?.contact_user_id === message.sender_id;
+        
+        console.log("3️⃣ Chat aberto?", isChatOpen);
+        console.log("   message.sender_id:", message.sender_id);
+        console.log("   currentState.selectedContact:", currentState.selectedContact);
+        console.log("   selectedContact?.contact_user_id:", currentState.selectedContact?.contact_user_id);
 
-        console.log("📊 Estado da janela:", {
-            isWindowFocused,
-            isChatOpen,
-            senderId: message.sender_id,
-            currentContactId: currentState.selectedContact?.contact_user_id
-        });
+        // Debug 4: Decisão de mostrar ou não
+        const shouldSuppress = isWindowFocused && isChatOpen;
+        console.log("4️⃣ Suprimir notificação?", shouldSuppress);
+        console.log("   (isWindowFocused && isChatOpen) =", `(${isWindowFocused} && ${isChatOpen}) = ${shouldSuppress}`);
 
-        // Se o usuário está vendo a conversa, NÃO mostrar notificação
-        if (isWindowFocused && isChatOpen) {
-            console.log("👁️ Usuário está vendo a conversa - notificação suprimida");
+        if (shouldSuppress) {
+            console.log("👁️ SUPRIMINDO - Usuário está vendo a conversa");
+            console.log("═══════════════════════════════════════════");
             return;
         }
 
-        console.log("📢 Mostrando notificação de mensagem...");
+        console.log("✅ CONDIÇÕES ATENDIDAS - Mostrando notificação");
 
         const body = message.content.length > 100
             ? message.content.substring(0, 100) + '...'
             : message.content;
         
+        const notificationData = {
+            title: `💬 ${senderName}`,
+            body: body,
+            icon: senderAvatar || "/assets/icons/icon-192.png",
+            badge: "/assets/icons/icon-192.png",
+            tag: `message-${message.sender_id}`,
+            timestamp: Date.now(),
+            messageId: message.id,
+            senderId: message.sender_id
+        };
+
+        console.log("5️⃣ Dados da notificação:", notificationData);
+
         try {
-            // ✅ PWA: Usar Service Worker Registration
             if (this.serviceWorkerReady) {
+                console.log("6️⃣ Usando Service Worker Registration");
                 const registration = await navigator.serviceWorker.ready;
                 
-                await registration.showNotification(`💬 ${senderName}`, {
-                    body: body,
-                    icon: senderAvatar || "/assets/icons/icon-192.png",
-                    badge: "/assets/icons/icon-192.png",
-                    tag: `message-${message.sender_id}`,
+                await registration.showNotification(notificationData.title, {
+                    body: notificationData.body,
+                    icon: notificationData.icon,
+                    badge: notificationData.badge,
+                    tag: notificationData.tag,
                     requireInteraction: false,
                     silent: !this.soundEnabled,
-                    timestamp: Date.now(),
+                    timestamp: notificationData.timestamp,
                     data: {
-                        messageId: message.id,
-                        senderId: message.sender_id,
-                        conversationId: message.sender_id,
+                        messageId: notificationData.messageId,
+                        senderId: notificationData.senderId,
+                        conversationId: notificationData.senderId,
                         type: 'message'
                     }
                 });
                 
-                console.log(`✅ Notificação enviada via Service Worker para: ${senderName}`);
+                console.log(`✅ NOTIFICAÇÃO ENVIADA VIA SERVICE WORKER`);
             } else {
-                // Fallback: Browser normal (não PWA instalado)
-                const notification = new Notification(`💬 ${senderName}`, {
-                    body: body,
-                    icon: senderAvatar || "/assets/icons/icon-192.png",
-                    badge: "/assets/icons/icon-192.png",
-                    tag: `message-${message.sender_id}`,
+                console.log("6️⃣ Usando Notification API (fallback)");
+                const notification = new Notification(notificationData.title, {
+                    body: notificationData.body,
+                    icon: notificationData.icon,
+                    badge: notificationData.badge,
+                    tag: notificationData.tag,
                     requireInteraction: false,
                     silent: !this.soundEnabled,
-                    timestamp: Date.now(),
+                    timestamp: notificationData.timestamp,
                     data: {
-                        messageId: message.id,
-                        senderId: message.sender_id,
-                        conversationId: message.sender_id
+                        messageId: notificationData.messageId,
+                        senderId: notificationData.senderId,
+                        conversationId: notificationData.senderId
                     }
                 });
 
@@ -236,14 +261,25 @@ class NotificationManager {
 
                 setTimeout(() => notification.close(), 5000);
                 
-                console.log(`✅ Notificação enviada (fallback browser) para: ${senderName}`);
+                console.log(`✅ NOTIFICAÇÃO ENVIADA VIA NOTIFICATION API`);
             }
+
+            // Salvar no histórico de debug
+            this.notificationsShown.push({
+                time: new Date().toISOString(),
+                sender: senderName,
+                message: message.content.substring(0, 50),
+                method: this.serviceWorkerReady ? 'ServiceWorker' : 'Notification API'
+            });
 
             if (this.soundEnabled) {
                 this.playSound();
             }
+
+            console.log("═══════════════════════════════════════════");
         } catch (error) {
-            console.error("❌ Erro ao mostrar notificação:", error);
+            console.error("❌ ERRO AO MOSTRAR NOTIFICAÇÃO:", error);
+            console.log("═══════════════════════════════════════════");
         }
     }
 
@@ -292,15 +328,25 @@ class NotificationManager {
         return this.permission;
     }
 
-    // Método para debug
     getStatus() {
         return {
             isSupported: this.isSupported,
             permission: this.permission,
             enabled: this.enabled,
             soundEnabled: this.soundEnabled,
-            serviceWorkerReady: this.serviceWorkerReady
+            serviceWorkerReady: this.serviceWorkerReady,
+            notificationsCount: this.notificationsShown.length
         };
+    }
+
+    // ✅ MÉTODO DE DEBUG
+    getNotificationHistory() {
+        return this.notificationsShown;
+    }
+
+    clearHistory() {
+        this.notificationsShown = [];
+        console.log("🗑️ Histórico de notificações limpo");
     }
 }
 
@@ -310,7 +356,7 @@ const notificationManager = new NotificationManager();
 // Expor no window para debug
 window.notificationManager = notificationManager;
 
-// Debug helper melhorado
+// Debug helpers melhorados
 window.testNotification = async () => {
     console.log("🧪 Testando notificação...");
     console.log("Status:", notificationManager.getStatus());
@@ -324,6 +370,19 @@ window.testNotification = async () => {
     } else {
         await notificationManager.showTestNotification();
     }
+};
+
+window.debugNotificationState = () => {
+    console.log("═══════════════════════════════════════════");
+    console.log("🔍 DEBUG DE ESTADO DE NOTIFICAÇÕES");
+    console.log("═══════════════════════════════════════════");
+    console.log("Status completo:", notificationManager.getStatus());
+    console.log("window.state:", window.state);
+    console.log("document.hasFocus():", document.hasFocus());
+    console.log("document.hidden:", document.hidden);
+    console.log("document.visibilityState:", document.visibilityState);
+    console.log("Histórico de notificações:", notificationManager.getNotificationHistory());
+    console.log("═══════════════════════════════════════════");
 };
 
 if (typeof module !== 'undefined' && module.exports) {
