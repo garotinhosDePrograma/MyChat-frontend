@@ -1,4 +1,4 @@
-// Socket Manager - VERSÃO FINAL CORRIGIDA
+// Socket Manager - VERSÃO CORRIGIDA (confirmação de mensagens)
 class SocketManager {
     constructor() {
         this.socket = null;
@@ -6,6 +6,7 @@ class SocketManager {
         this.currentConversation = null;
         this.typingTimeout = null;
         this.eventHandlers = {};
+        this.pendingConfirmations = new Map(); // ✅ Rastrear mensagens aguardando confirmação
     }
 
     connect(token) {
@@ -29,7 +30,8 @@ class SocketManager {
             transports: ['websocket', 'polling'],
             reconnection: true,
             reconnectionDelay: 1000,
-            reconnectionAttempts: 5
+            reconnectionAttempts: 5,
+            timeout: 10000 // ✅ Timeout de 10 segundos
         });
 
         this.setupEventListeners();
@@ -50,8 +52,8 @@ class SocketManager {
             }
         });
 
-        this.socket.on('disconnect', () => {
-            console.log('🔌 DESCONECTADO do WebSocket');
+        this.socket.on('disconnect', (reason) => {
+            console.log('🔌 DESCONECTADO do WebSocket. Motivo:', reason);
             this.connected = false;
             
             if (typeof Utils !== 'undefined') {
@@ -67,7 +69,7 @@ class SocketManager {
             }
         });
 
-        // ========== CORREÇÃO CRÍTICA: ESCUTAR 'new_message' ==========
+        // ========== NOVA MENSAGEM RECEBIDA ==========
         this.socket.on('new_message', (data) => {
             console.log('💬 ===== NOVA MENSAGEM RECEBIDA =====');
             console.log('Dados completos:', data);
@@ -76,23 +78,49 @@ class SocketManager {
             console.log('Conteúdo:', data.content);
             console.log('====================================');
             
-            // Emitir evento interno 'newMessage' (camelCase) para compatibilidade
             this.emit('newMessage', data);
         });
 
-        // Notificação de mensagem (fallback)
+        // ========== CONFIRMAÇÃO DE MENSAGEM ENVIADA ==========
+        this.socket.on('message_sent', (data) => {
+            console.log('✅ ===== MENSAGEM CONFIRMADA =====');
+            console.log('Dados:', data);
+            console.log('Temp ID:', data.temp_id);
+            console.log('Message ID real:', data.message?.id);
+            console.log('=================================');
+            
+            // ✅ Resolver promessa pendente se existir
+            if (data.temp_id && this.pendingConfirmations.has(data.temp_id)) {
+                const { resolve } = this.pendingConfirmations.get(data.temp_id);
+                resolve(data.message);
+                this.pendingConfirmations.delete(data.temp_id);
+                console.log(`✅ Confirmação processada para temp_id: ${data.temp_id}`);
+            }
+            
+            // Emitir evento para dashboard
+            this.emit('messageConfirmed', data);
+        });
+
+        // ========== FALLBACK: message_confirmed (nome antigo) ==========
+        this.socket.on('message_confirmed', (data) => {
+            console.log('✅ message_confirmed (fallback):', data);
+            
+            if (data.temp_id && this.pendingConfirmations.has(data.temp_id)) {
+                const { resolve } = this.pendingConfirmations.get(data.temp_id);
+                resolve(data.message);
+                this.pendingConfirmations.delete(data.temp_id);
+            }
+            
+            this.emit('messageConfirmed', data);
+        });
+
+        // Notificação de mensagem
         this.socket.on('message_notification', (data) => {
             console.log('🔔 NOTIFICAÇÃO de mensagem:', data);
             this.emit('messageNotification', data);
         });
 
-        // Confirmação de mensagem enviada
-        this.socket.on('message_confirmed', (data) => {
-            console.log('✅ MENSAGEM CONFIRMADA:', data);
-            this.emit('messageConfirmed', data);
-        });
-
-        // Mensagem entregue
+        // Status da mensagem
         this.socket.on('message_status_update', (data) => {
             console.log('📨 STATUS da mensagem:', data);
             this.emit('messageStatusUpdate', data);
@@ -104,19 +132,17 @@ class SocketManager {
             this.emit('userTyping', data);
         });
 
-        // Usuário parou de digitar
         this.socket.on('user_stopped_typing', (data) => {
             console.log('⌨️ Usuário PAROU de digitar:', data);
             this.emit('userStoppedTyping', data);
         });
 
-        // Usuário online
+        // Status online/offline
         this.socket.on('user_online', (data) => {
             console.log('🟢 Usuário ONLINE:', data);
             this.emit('userOnline', data);
         });
 
-        // Usuário offline
         this.socket.on('user_offline', (data) => {
             console.log('⚫ Usuário OFFLINE:', data);
             this.emit('userOffline', data);
@@ -131,6 +157,13 @@ class SocketManager {
         // Erro do servidor
         this.socket.on('error', (data) => {
             console.error('❌ ERRO do servidor:', data);
+            
+            // ✅ Rejeitar promessas pendentes em caso de erro
+            if (data.temp_id && this.pendingConfirmations.has(data.temp_id)) {
+                const { reject } = this.pendingConfirmations.get(data.temp_id);
+                reject(new Error(data.message || 'Erro ao enviar mensagem'));
+                this.pendingConfirmations.delete(data.temp_id);
+            }
             
             if (typeof Utils !== 'undefined') {
                 Utils.showToast(data.message || 'Erro no servidor', 'error');
@@ -172,27 +205,63 @@ class SocketManager {
         console.log(`👥 Saiu da conversa com usuário ${contactUserId}`);
     }
 
+    // ✅ MÉTODO CORRIGIDO: Agora retorna Promise
     sendMessage(receiverId, content, tempId = null) {
         if (!this.connected) {
+            console.warn('⚠️ Não conectado ao WebSocket');
             if (typeof Utils !== 'undefined') {
                 Utils.showToast('Não conectado. Tentando enviar...', 'warning');
             }
-            return false;
+            return Promise.reject(new Error('WebSocket não conectado'));
         }
+
+        const finalTempId = tempId || `temp_${Date.now()}_${Math.random()}`;
 
         const payload = {
             receiver_id: receiverId,
-            content: content
+            content: content,
+            temp_id: finalTempId
         };
 
-        if (tempId) {
-            payload.temp_id = tempId;
-        }
-
         console.log('📤 ENVIANDO mensagem:', payload);
-        this.socket.emit('send_message', payload);
 
-        return true;
+        // ✅ Criar Promise que será resolvida quando receber confirmação
+        return new Promise((resolve, reject) => {
+            // Guardar callbacks para resolver depois
+            this.pendingConfirmations.set(finalTempId, { resolve, reject });
+
+            // Timeout de 10 segundos para considerar falha
+            const timeout = setTimeout(() => {
+                if (this.pendingConfirmations.has(finalTempId)) {
+                    console.error(`❌ TIMEOUT ao enviar mensagem (temp_id: ${finalTempId})`);
+                    this.pendingConfirmations.delete(finalTempId);
+                    reject(new Error('Timeout ao enviar mensagem'));
+                }
+            }, 10000);
+
+            // Emitir mensagem
+            this.socket.emit('send_message', payload, (response) => {
+                // ✅ Callback de acknowledgment do Socket.IO
+                clearTimeout(timeout);
+                
+                if (response && response.success) {
+                    console.log('✅ ACK recebido do servidor:', response);
+                    
+                    // Se já temos a mensagem no response, resolver imediatamente
+                    if (response.message) {
+                        if (this.pendingConfirmations.has(finalTempId)) {
+                            this.pendingConfirmations.delete(finalTempId);
+                        }
+                        resolve(response.message);
+                    }
+                    // Senão, aguardar evento 'message_sent'
+                } else {
+                    console.error('❌ Erro no ACK:', response);
+                    this.pendingConfirmations.delete(finalTempId);
+                    reject(new Error(response?.message || 'Erro ao enviar mensagem'));
+                }
+            });
+        });
     }
 
     startTyping(contactUserId) {
@@ -223,6 +292,9 @@ class SocketManager {
 
     disconnect() {
         if (this.socket) {
+            // Limpar confirmações pendentes
+            this.pendingConfirmations.clear();
+            
             this.socket.disconnect();
             this.socket = null;
             this.connected = false;
@@ -267,12 +339,12 @@ class SocketManager {
         });
     }
 
-    // Debug helper
     getStatus() {
         return {
             connected: this.connected,
             currentConversation: this.currentConversation,
             registeredEvents: Object.keys(this.eventHandlers),
+            pendingConfirmations: this.pendingConfirmations.size,
             listenersCount: Object.entries(this.eventHandlers).reduce((acc, [event, handlers]) => {
                 acc[event] = handlers.length;
                 return acc;
@@ -284,10 +356,10 @@ class SocketManager {
 // Instância global
 const socketManager = new SocketManager();
 
-// Expor no window para debug
+// Expor no window
 window.socketManager = socketManager;
 
-// Helper de debug
+// Debug helper
 window.debugSocket = () => {
     console.log('=== DEBUG DO SOCKET ===');
     console.log('Status:', socketManager.getStatus());
