@@ -855,3 +855,79 @@ body {
         height: -webkit-fill-available;
     }
 }
+
+/* CSS para banner de notificação */
+
+.notification-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 16px 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+    animation: slideDown 0.3s ease-out;
+}
+        
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.notification-banner-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+        
+.notification-banner-content span {
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+        
+.notification-banner-content div {
+    display: flex;
+    gap: 10px;
+}
+
+.notification-banner .btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+        
+.notification-banner .btn-primary {
+    background: white;
+    color: #667eea;
+}
+        
+.notification-banner .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+        
+.notification-banner .btn-secondary {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.notification-banner .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.3);
+}

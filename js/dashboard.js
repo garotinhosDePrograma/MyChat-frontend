@@ -63,6 +63,41 @@ async function init() {
     } else if (!socketManager) {
         console.warn('SocketManager não está disponível');
     }
+
+    if (notificationManager.isSupported && !notificationManager.isEnabled()) {
+        setTimeout(() => {
+            showNotificationBanner();
+        }, 3000);
+    }
+}
+
+function showNotificationBanner() {
+    const banner = document.createElement('div');
+    banner.className = 'notification-banner';
+    banner.innerHTML = `
+        <div class="notification-banner-content"
+            <span>Quer receber notificações de novas mensagens?</span>
+            <div>
+                <button class="btn btn-primary btn-sm" id="allow-notifications">Permitit</button>
+                <button class="btn btn-secondery btn-sm" id="deny-notifications">Agora não</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(banner);
+
+    document.getElementById('allow-notifications').onclick = async () => {
+        const granted = await notificationManager.requestPermission();
+        banner.remove();
+
+        if (granted) {
+            Utils.showToast("Notificações ativadas!", "success");
+        }
+    };
+
+    document.getElementById('deny-notifications').onclick = () => {
+        banner.remove();
+    };
 }
 
 // Configurar handlers do WebSocket
@@ -84,6 +119,20 @@ function setupSocketHandlers() {
             
             if (message.receiver_id === state.currentUser.id) {
                 socketManager.markAsRead(message.sender_id);
+            }
+        }
+
+        if (message.receiver_id === state.currentUser.id) {
+            const sender = state.contacts.find(
+                c => c.contact_user_id === message.sender_id
+            );
+
+            if (sender && notificationManager.isEnabled()) {
+                notificationManager.showMessageNotification(
+                    message,
+                    sender.contact_name || sender.user_name,
+                    null
+                );
             }
         }
         
