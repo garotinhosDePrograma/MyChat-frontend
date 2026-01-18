@@ -78,7 +78,7 @@ function showNotificationBanner() {
         <div class="notification-banner-content"
             <span>Quer receber notificações de novas mensagens?</span>
             <div>
-                <button class="btn btn-primary btn-sm" id="allow-notifications">Permitit</button>
+                <button class="btn btn-primary btn-sm" id="allow-notifications">Permitir</button>
                 <button class="btn btn-secondery btn-sm" id="deny-notifications">Agora não</button>
             </div>
         </div>

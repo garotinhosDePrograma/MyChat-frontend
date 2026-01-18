@@ -30,7 +30,7 @@ class NotificationManager {
         console.log(`Notificações: ${this.enabled ? 'ATIVADAS' : 'DESATIVADAS'}`);
     }
 
-    async requestePermission() {
+    async requestPermission() {
         if (!this.isSupported) {
             throw new Error("Notificações não suportadas");
         }
