@@ -109,6 +109,8 @@ function setupSocketHandlers() {
 
     // Nova mensagem recebida
     socketManager.on('newMessage', (message) => {
+        console.log("Nova mensagem recebida:", message);
+
         if (state.selectedContact && 
             (message.sender_id === state.selectedContact.contact_user_id ||
              message.receiver_id === state.selectedContact.contact_user_id)) {
@@ -127,12 +129,16 @@ function setupSocketHandlers() {
                 c => c.contact_user_id === message.sender_id
             );
 
-            if (sender && notificationManager.isEnabled()) {
+            if (sender && notificationManager?.isEnabled()) {
                 notificationManager.showMessageNotification(
                     message,
                     sender.contact_name || sender.user_name,
                     null
                 );
+            } else {
+                console.log("Notificação não mostrada:", {
+                    reason: !sender ? "Remetente não encontrado" : "Notificações desativadas"
+                });
             }
         }
         
@@ -821,3 +827,46 @@ if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
         }
     });
 }
+
+function debugNotifications() {
+    console.log("=== DEBUG DE NOTIFICAÇÕES ===");
+    console.log("1. NotificationManager existe?", typeof notificationManager !== 'undefined');
+    console.log("2. Status:", notificationManager?.getStatus());
+    console.log("3. Navegador suporta?", 'Notification' in window);
+    console.log("4. Permissão atual:", Notification.permission);
+    console.log("5. Estado atual:", {
+        currentUser: state.currentUser?.id,
+        selectedContact: state.selectedContact?.contact_user_id,
+        contactsCount: state.contacts.length
+    });
+    console.log("============================");
+}
+
+window.debugNotifications = debugNotifications;
+
+window.testNotificationNow = () => {
+    if (!notificationManager.isEnabled()) {
+        console.error("Notificações não ativadas");
+        alert("Notificações não ativadas. Clique em 'permitir' para ativar.");
+        notificationManager.requestPermission().then(granted => {
+            if (granted) {
+                notificationManager.showTestNotification();
+            }
+        });
+        return;
+    }
+
+    const fakeMessage = {
+        id: 999,
+        sender_id: 1,
+        receiver_id: state.currentUser.id,
+        content: "Mensagem de teste",
+        created_at: new Date().toISOString()
+    };
+
+    notificationManager.showMessageNotification(
+        fakeMessage,
+        'teste',
+        null
+    );
+};
