@@ -109,31 +109,33 @@ self.addEventListener('fetch', (event) => {
     );
 });
 
-// ✅ HANDLER DE PUSH - ADICIONADO
-self.addEventListener('push', (event) => {
-    console.log('[ServiceWorker] 📨 Push recebido:', event);
-    
-    let data = {};
+self.addEventListener('push', event => {
+    let payload = {};
+
     if (event.data) {
         try {
-            data = event.data.json();
+            payload = event.data.json();
         } catch (e) {
-            data = { body: event.data.text() };
+            payload = {
+                title: 'MyChat',
+                body: event.data.text()
+            };
         }
     }
-    
+
+    const title = payload.title || 'MyChat';
+
     const options = {
-        body: data.body || 'Nova mensagem no MyChat',
-        icon: data.icon || '/assets/icons/icon-192.png',
-        badge: '/assets/icons/icon-192.png',
-        vibrate: [100, 50, 100],
-        data: data.data || {},
-        tag: 'message-notification',
-        requireInteraction: false
+        body: payload.body || 'Nova mensagem',
+        icon: payload.icon || '/assets/icons/icon-192.png',
+        badge: payload.badge || '/assets/icons/icon-192.png',
+        data: payload.data || {},
+        tag: 'mychat-push',
+        renotify: true
     };
-    
+
     event.waitUntil(
-        self.registration.showNotification(data.title || 'MyChat', options)
+        self.registration.showNotification(title, options)
     );
 });
 
