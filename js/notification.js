@@ -180,11 +180,11 @@ class NotificationManager {
         console.log("4️⃣ Suprimir notificação?", shouldSuppress);
         console.log("   (isWindowFocused && isChatOpen) =", `(${isWindowFocused} && ${isChatOpen}) = ${shouldSuppress}`);
 
-        if (shouldSuppress) {
-            console.log("👁️ SUPRIMINDO - Usuário está vendo a conversa");
-            console.log("═══════════════════════════════════════════");
-            return;
-        }
+        //if (shouldSuppress) {
+        //    console.log("👁️ SUPRIMINDO - Usuário está vendo a conversa");
+        //    console.log("═══════════════════════════════════════════");
+        //    return;
+        //}
 
         console.log("✅ CONDIÇÕES ATENDIDAS - Mostrando notificação");
 
