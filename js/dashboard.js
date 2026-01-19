@@ -55,6 +55,15 @@ let eventListenersSetup = false;
 async function init() {
     setupEventListeners();
     await loadContacts();
+
+    // Inicializar push notifications
+    if (typeof pushNotificationManager !== 'undefined' && pushNotificationManager.isSupported) {
+        await pushNotificationManager.init();
+
+        if (Notification.permission === 'granted') {
+            await pushNotificationManager.subscribe();
+        }
+    }
     
     const token = Storage.getToken();
     if (token && typeof socketManager !== 'undefined') {
@@ -87,11 +96,20 @@ function showNotificationBanner() {
     document.body.appendChild(banner);
 
     document.getElementById('allow-notifications').onclick = async () => {
-        const granted = await notificationManager.requestPermission();
-        banner.remove();
+        if (typeof pushNotificationManager !== 'undefined' && pushNotificationManager.isSupported) {
+            const granted = await pushNotificationManager.requestPermission();
+            banner.remove();
 
-        if (granted) {
-            Utils.showToast("Notificações ativadas!", "success");
+            if (granted) {
+                Utils.showToast("Notificações Push ativadas", "success");
+            }
+        } else {
+            const granted = await notificationManager.requestPermission();
+            banner.remover();
+
+            if (granted) {
+                Utils.showToast("Notificações ativadas", "success");
+            }
         }
     };
 
@@ -868,6 +886,28 @@ if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
         }
     });
 }
+
+async function requestPushPermission() {
+    if (typeof pushNotificationManager === 'undefined') {
+        Utils.showToast('Push Notifications não disponível', 'error');
+        return;
+    }
+    
+    try {
+        const granted = await pushNotificationManager.requestPermission();
+        if (granted) {
+            Utils.showToast('Notificações ativadas!', 'success');
+        } else {
+            Utils.showToast('Permissão negada', 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao solicitar permissão:', error);
+        Utils.showToast('Erro ao ativar notificações', 'error');
+    }
+}
+
+// Expor globalmente
+window.requestPushPermission = requestPushPermission;
 
 function debugNotifications() {
     console.log("=== DEBUG DE NOTIFICAÇÕES ===");
