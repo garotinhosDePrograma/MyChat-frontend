@@ -1,4 +1,4 @@
-// Service Worker para MyChat PWA - COM NOTIFICAÇÕES
+// Service Worker para MyChat PWA - COM PUSH NOTIFICATIONS
 const CACHE_NAME = 'mychat-v1';
 const OFFLINE_URL = '/index.html';
 
@@ -20,6 +20,7 @@ const FILES_TO_CACHE = [
     '/js/auth.js',
     '/js/dashboard.js',
     '/js/notification.js',
+    '/js/push-notification.js',
     '/js/socket.js',
     '/manifest.json'
 ];
@@ -108,13 +109,40 @@ self.addEventListener('fetch', (event) => {
     );
 });
 
-// ✅ CLIQUE NA NOTIFICAÇÃO - CRUCIAL PARA PWA
+// ✅ HANDLER DE PUSH - ADICIONADO
+self.addEventListener('push', (event) => {
+    console.log('[ServiceWorker] 📨 Push recebido:', event);
+    
+    let data = {};
+    if (event.data) {
+        try {
+            data = event.data.json();
+        } catch (e) {
+            data = { body: event.data.text() };
+        }
+    }
+    
+    const options = {
+        body: data.body || 'Nova mensagem no MyChat',
+        icon: data.icon || '/assets/icons/icon-192.png',
+        badge: '/assets/icons/icon-192.png',
+        vibrate: [100, 50, 100],
+        data: data.data || {},
+        tag: 'message-notification',
+        requireInteraction: false
+    };
+    
+    event.waitUntil(
+        self.registration.showNotification(data.title || 'MyChat', options)
+    );
+});
+
+// Clique na notificação
 self.addEventListener('notificationclick', (event) => {
     console.log('[ServiceWorker] 🖱️ Notificação clicada:', event);
     
     event.notification.close();
     
-    // Obter dados da notificação
     const notificationData = event.notification.data || {};
     
     event.waitUntil(
@@ -122,11 +150,9 @@ self.addEventListener('notificationclick', (event) => {
             type: 'window',
             includeUncontrolled: true
         }).then((clientList) => {
-            // Se já existe janela aberta, focar nela
             for (let i = 0; i < clientList.length; i++) {
                 const client = clientList[i];
                 if (client.url.includes('dashboard.html')) {
-                    // Enviar mensagem para abrir a conversa
                     if (notificationData.senderId) {
                         client.postMessage({
                             type: 'OPEN_CONVERSATION',
@@ -137,7 +163,6 @@ self.addEventListener('notificationclick', (event) => {
                 }
             }
             
-            // Se não existe, abrir nova janela
             let url = '/dashboard.html';
             if (notificationData.senderId) {
                 url += `?open=${notificationData.senderId}`;
@@ -160,36 +185,3 @@ self.addEventListener('sync', (event) => {
 async function syncMessages() {
     console.log('[ServiceWorker] Sincronizando mensagens pendentes...');
 }
-
-// ✅ NOTIFICAÇÕES PUSH (opcional para futuro)
-self.addEventListener('push', (event) => {
-    console.log('[ServiceWorker] 📨 Push recebido:', event);
-    
-    let data = {};
-    if (event.data) {
-        try {
-            data = event.data.json();
-        } catch (e) {
-            data = { body: event.data.text() };
-        }
-    }
-    
-    const options = {
-        body: data.body || 'Nova mensagem no MyChat',
-        icon: data.icon || '/assets/icons/icon-192.png',
-        badge: '/assets/icons/icon-192.png',
-        vibrate: [100, 50, 100],
-        data: {
-            dateOfArrival: Date.now(),
-            senderId: data.senderId,
-            messageId: data.messageId,
-            ...data
-        },
-        tag: data.tag || 'message-notification',
-        requireInteraction: false
-    };
-    
-    event.waitUntil(
-        self.registration.showNotification(data.title || 'MyChat', options)
-    );
-});
