@@ -4,7 +4,7 @@ const CONFIG = {
     API_URL: 'https://mychat-backend-m7el.onrender.com',
     
     // Versão da aplicação
-    VERSION: '1.0.23',
+    VERSION: '1.0.24',
     
     // Nome da aplicação
     APP_NAME: 'MyChat',
@@ -36,7 +36,11 @@ const CONFIG = {
         MARK_READ: (senderId) => `/api/messages/mark-read/${senderId}`,
         UNREAD: '/api/messages/unread',
         DELETE_MESSAGE: (id) => `/api/messages/${id}`,
-        DELETE_CONVERSATION: (userId) => `/api/messages/conversation/${userId}`
+        DELETE_CONVERSATION: (userId) => `/api/messages/conversation/${userId}`,
+
+        PUSH_VAPID_KEY: '/api/push/vapid-public-key',
+        PUSH_SUBSCRIBE: '/api/push/subscribe',
+        PUSH_UNSUBSCRIBE: '/api/push/unsubscribe'
     },
     
     // Configurações de mensagens
