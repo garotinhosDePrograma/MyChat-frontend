@@ -4,7 +4,7 @@ const CONFIG = {
     API_URL: 'https://mychat-backend-m7el.onrender.com',
     
     // Versão da aplicação
-    VERSION: '1.0.27',
+    VERSION: '1.0.30',
     
     // Nome da aplicação
     APP_NAME: 'MyChat',
