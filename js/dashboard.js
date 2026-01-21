@@ -81,14 +81,31 @@ async function init() {
 }
 
 function showNotificationBanner() {
+    // Evitar duplicatas
+    if (document.querySelector('.notification-banner')) {
+        return;
+    }
+
+    // Não mostrar se já foi dispensado nesta sessão
+    if (sessionStorage.getItem('notification-banner-dismissed')) {
+        return;
+    }
+
     const banner = document.createElement('div');
     banner.className = 'notification-banner';
     banner.innerHTML = `
-        <div class="notification-banner-content"
-            <span>Quer receber notificações de novas mensagens?</span>
+        <div class="notification-banner-content">
+            <span>
+                <span style="font-size: var(--font-xl);">🔔</span>
+                Quer receber notificações de novas mensagens?
+            </span>
             <div>
-                <button class="btn btn-primary btn-sm" id="allow-notifications">Permitir</button>
-                <button class="btn btn-secondery btn-sm" id="deny-notifications">Agora não</button>
+                <button class="btn btn-primary" id="allow-notifications">
+                    Permitir
+                </button>
+                <button class="btn btn-secondary" id="deny-notifications">
+                    Agora não
+                </button>
             </div>
         </div>
     `;
@@ -96,25 +113,34 @@ function showNotificationBanner() {
     document.body.appendChild(banner);
 
     document.getElementById('allow-notifications').onclick = async () => {
-        if (typeof pushNotificationManager !== 'undefined' && pushNotificationManager.isSupported) {
-            const granted = await pushNotificationManager.requestPermission();
-            banner.remove();
+        try {
+            if (typeof pushNotificationManager !== 'undefined' && pushNotificationManager.isSupported) {
+                const granted = await pushNotificationManager.requestPermission();
+                banner.remove();
 
-            if (granted) {
-                Utils.showToast("Notificações Push ativadas", "success");
+                if (granted && typeof Utils !== 'undefined') {
+                    Utils.showToast("✅ Notificações Push ativadas", "success");
+                }
+            } else if (typeof notificationManager !== 'undefined') {
+                const granted = await notificationManager.requestPermission();
+                banner.remove();
+
+                if (granted && typeof Utils !== 'undefined') {
+                    Utils.showToast("✅ Notificações ativadas", "success");
+                }
             }
-        } else {
-            const granted = await notificationManager.requestPermission();
-            banner.remover();
-
-            if (granted) {
-                Utils.showToast("Notificações ativadas", "success");
+        } catch (error) {
+            console.error("Erro ao ativar notificações:", error);
+            banner.remove();
+            if (typeof Utils !== 'undefined') {
+                Utils.showToast("❌ Erro ao ativar notificações", "error");
             }
         }
     };
 
     document.getElementById('deny-notifications').onclick = () => {
         banner.remove();
+        sessionStorage.setItem('notification-banner-dismissed', 'true');
     };
 }
 
@@ -802,60 +828,155 @@ async function addContact(userId, name) {
     }
 }
 
-const statusStyles = `
-<style>
-.message-status {
-    font-size: 12px;
-    margin-left: 4px;
+// ============================================================================
+// Injetar estilos de status de mensagens (Design System v2.0)
+// ============================================================================
+
+function injectMessageStatusStyles() {
+    if (document.getElementById('message-status-styles')) {
+        return;
+    }
+
+    const styles = document.createElement('style');
+    styles.id = 'message-status-styles';
+    styles.textContent = `
+        /* MESSAGE STATUS STYLES - Design System v2.0 */
+        
+        .message-status {
+            font-size: var(--font-xs);
+            margin-left: var(--space-1);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-1);
+        }
+
+        .message-status.sending {
+            opacity: 0.6;
+            animation: statusPulse 1.5s infinite;
+        }
+
+        @keyframes statusPulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        .message-status.sent {
+            color: var(--text-tertiary);
+        }
+
+        .message.sent .message-status.sent {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .message-status.delivered {
+            color: var(--primary-400);
+        }
+
+        .message.sent .message-status.delivered {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .message-status.error {
+            color: var(--error);
+            cursor: pointer;
+            animation: statusShake 0.5s;
+            transition: all var(--transition-fast);
+        }
+
+        .message-status.error:hover {
+            transform: scale(1.2);
+        }
+
+        @keyframes statusShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-0.1875rem); }
+            75% { transform: translateX(0.1875rem); }
+        }
+
+        .message.sending {
+            opacity: 0.7;
+        }
+
+        .message.error {
+            position: relative;
+        }
+
+        .message.error::before {
+            content: '';
+            position: absolute;
+            left: -3px;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background-color: var(--error);
+            border-radius: var(--radius-full);
+        }
+
+        .message.error .message-bubble {
+            border: 1px solid var(--error);
+            background: linear-gradient(
+                135deg,
+                rgba(239, 68, 68, 0.1) 0%,
+                rgba(239, 68, 68, 0.05) 100%
+            );
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .message.error .message-bubble:hover {
+            border-color: var(--error);
+            background: linear-gradient(
+                135deg,
+                rgba(239, 68, 68, 0.15) 0%,
+                rgba(239, 68, 68, 0.08) 100%
+            );
+            transform: translateX(-0.125rem);
+        }
+
+        .message.sent.error .message-bubble {
+            background: linear-gradient(
+                135deg,
+                rgba(239, 68, 68, 0.3) 0%,
+                rgba(220, 38, 38, 0.3) 100%
+            );
+        }
+
+        .message.error::after {
+            content: '⚠️';
+            position: absolute;
+            left: -1.875rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: var(--font-base);
+            animation: errorBounce 2s infinite;
+        }
+
+        @keyframes errorBounce {
+            0%, 100% { transform: translateY(-50%) scale(1); }
+            50% { transform: translateY(-50%) scale(1.1); }
+        }
+
+        [data-theme="dark"] .message.error .message-bubble {
+            background: linear-gradient(
+                135deg,
+                rgba(239, 68, 68, 0.2) 0%,
+                rgba(239, 68, 68, 0.1) 100%
+            );
+        }
+
+        [data-theme="dark"] .message.error .message-bubble:hover {
+            background: linear-gradient(
+                135deg,
+                rgba(239, 68, 68, 0.25) 0%,
+                rgba(239, 68, 68, 0.15) 100%
+            );
+        }
+    `;
+    
+    document.head.appendChild(styles);
+    console.log("✅ Estilos de status de mensagens injetados (Design System v2.0)");
 }
 
-.message-status.sending {
-    opacity: 0.6;
-    animation: pulse 1.5s infinite;
-}
-
-.message-status.sent {
-    color: var(--text-light);
-}
-
-.message-status.delivered {
-    color: var(--primary-color);
-}
-
-.message-status.error {
-    color: var(--danger-color);
-    cursor: pointer;
-    animation: shake 0.5s;
-}
-
-.message.sending {
-    opacity: 0.7;
-}
-
-.message.error {
-    border-left: 3px solid var(--danger-color);
-    cursor: pointer;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 0.6; }
-    50% { opacity: 1; }
-}
-
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-5px); }
-    75% { transform: translateX(5px); }
-}
-</style>
-`;
-
-if (!document.getElementById('message-status-styles')) {
-    const style = document.createElement('style');
-    style.id = 'message-status-styles';
-    style.textContent = statusStyles;
-    document.head.appendChild(style);
-}
 
 function getInitials(name) {
     return name
@@ -951,3 +1072,11 @@ window.testNotificationNow = () => {
         null
     );
 };
+
+injectMessagesStatusStyles();
+
+if (notificationManager.isSupported && !notificationManager.isEnabled()) {
+    setTimeout(() => {
+        showNotificationBanner();
+    }, 5000);
+}
