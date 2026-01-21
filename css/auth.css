@@ -1,4 +1,11 @@
-/* Auth Pages Styles (Login e Register) - Modern UI/UX */
+/* ========================================================================
+   MyChat - Auth Pages CSS v2.0
+   Design Moderno para Login/Register
+   ======================================================================== */
+
+/* ========================================================================
+   1. LAYOUT DE FUNDO
+   ======================================================================== */
 
 body {
     display: flex;
@@ -7,9 +14,11 @@ body {
     min-height: 100vh;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     position: relative;
-    overflow: hidden;
+    overflow-x: hidden;
+    padding: var(--space-4);
 }
 
+/* Efeito de fundo animado */
 body::before {
     content: '';
     position: absolute;
@@ -18,12 +27,12 @@ body::before {
     right: 0;
     bottom: 0;
     background: 
-        radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+        radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
     pointer-events: none;
 }
 
-/* Partículas flutuantes (opcional) */
+/* Partículas flutuantes */
 body::after {
     content: '';
     position: absolute;
@@ -36,75 +45,105 @@ body::after {
         radial-gradient(2px 2px at 60% 70%, white, transparent),
         radial-gradient(1px 1px at 50% 50%, white, transparent),
         radial-gradient(1px 1px at 80% 10%, white, transparent),
-        radial-gradient(2px 2px at 90% 60%, white, transparent);
+        radial-gradient(2px 2px at 90% 60%, white, transparent),
+        radial-gradient(1px 1px at 30% 80%, white, transparent),
+        radial-gradient(2px 2px at 70% 20%, white, transparent);
     background-size: 200% 200%;
     background-position: 0% 0%;
-    opacity: 0.3;
-    animation: float-particles 20s ease-in-out infinite;
+    opacity: 0.25;
+    animation: floatParticles 20s ease-in-out infinite;
     pointer-events: none;
 }
 
-@keyframes float-particles {
-    0%, 100% { background-position: 0% 0%; }
-    50% { background-position: 100% 100%; }
+@keyframes floatParticles {
+    0%, 100% { 
+        background-position: 0% 0%; 
+        opacity: 0.25;
+    }
+    50% { 
+        background-position: 100% 100%;
+        opacity: 0.35;
+    }
 }
+
+/* ========================================================================
+   2. CONTAINER PRINCIPAL
+   ======================================================================== */
 
 .auth-container {
     width: 100%;
-    max-width: 480px;
-    padding: var(--spacing-lg);
+    max-width: 30rem;
+    padding: var(--space-6);
     position: relative;
     z-index: 1;
-    animation: slideUp 0.6s ease;
+    animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* ========================================================================
+   3. CARD DE AUTENTICAÇÃO
+   ======================================================================== */
+
 .auth-card {
-    background-color: var(--bg-primary);
-    border-radius: var(--border-radius-xl);
-    box-shadow: var(--shadow-xl);
-    padding: var(--spacing-xl);
-    border: 1px solid var(--border-color);
+    background-color: var(--surface-1);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-2xl);
+    padding: var(--space-8);
+    border: 1px solid var(--border-primary);
     backdrop-filter: blur(10px);
-    transition: var(--transition);
+    transition: transform var(--transition-base),
+                box-shadow var(--transition-base);
 }
 
 .auth-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.25);
 }
+
+/* ========================================================================
+   4. HEADER DO CARD
+   ======================================================================== */
 
 .auth-header {
     text-align: center;
-    margin-bottom: var(--spacing-xl);
+    margin-bottom: var(--space-8);
 }
 
 .auth-logo {
     font-size: 4rem;
-    margin-bottom: var(--spacing-md);
+    margin-bottom: var(--space-4);
     display: inline-block;
     animation: bounce 2s ease-in-out infinite;
 }
 
 @keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+    0%, 100% { 
+        transform: translateY(0) scale(1); 
+    }
+    50% { 
+        transform: translateY(-0.625rem) scale(1.05); 
+    }
 }
 
 .auth-title {
-    font-size: clamp(1.5rem, 4vw, 1.75rem);
-    margin-bottom: var(--spacing-sm);
+    font-size: clamp(1.5rem, 4vw, 1.875rem);
+    margin-bottom: var(--space-3);
     color: var(--text-primary);
-    font-weight: 700;
+    font-weight: var(--font-weight-bold);
 }
 
 .auth-subtitle {
     color: var(--text-secondary);
-    font-size: var(--font-size-base);
+    font-size: var(--font-base);
     margin: 0;
+    line-height: 1.5;
 }
 
+/* ========================================================================
+   5. FORMULÁRIO
+   ======================================================================== */
+
 .auth-form {
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: var(--space-6);
 }
 
 .auth-form .input-group {
@@ -112,123 +151,145 @@ body::after {
 }
 
 .auth-form .input-group label {
-    font-size: var(--font-size-sm);
-    font-weight: 600;
+    font-size: var(--font-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
 }
 
 .auth-form input {
-    transition: var(--transition-fast);
+    transition: all var(--transition-fast);
 }
 
 .auth-form input:focus {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
-/* Input com ícone (opcional) */
+/* Input com ícone */
 .input-with-icon {
     position: relative;
 }
 
 .input-with-icon input {
-    padding-left: 44px;
+    padding-left: 2.75rem;
 }
 
 .input-icon {
     position: absolute;
-    left: 14px;
+    left: var(--space-4);
     top: 50%;
     transform: translateY(-50%);
-    font-size: 18px;
-    color: var(--text-light);
+    font-size: var(--font-lg);
+    color: var(--text-tertiary);
     pointer-events: none;
 }
 
 /* Password toggle */
 .password-toggle {
     position: absolute;
-    right: 12px;
+    right: var(--space-3);
     top: 50%;
     transform: translateY(-50%);
     background: none;
     border: none;
     cursor: pointer;
-    padding: 4px 8px;
-    color: var(--text-light);
-    font-size: 18px;
-    transition: var(--transition-fast);
+    padding: var(--space-1) var(--space-2);
+    color: var(--text-tertiary);
+    font-size: var(--font-lg);
+    transition: all var(--transition-fast);
+    border-radius: var(--radius-md);
 }
 
 .password-toggle:hover {
-    color: var(--primary-color);
+    color: var(--primary-400);
+    background-color: var(--surface-2);
 }
 
-/* Checkbox customizado */
+/* ========================================================================
+   6. CHECKBOX CUSTOMIZADO
+   ======================================================================== */
+
 .checkbox-group {
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm);
-    margin: var(--spacing-md) 0;
+    gap: var(--space-3);
+    margin: var(--space-4) 0;
 }
 
 .checkbox-group input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
+    width: 1.125rem;
+    height: 1.125rem;
     cursor: pointer;
-    accent-color: var(--primary-color);
+    accent-color: var(--primary-400);
+    border-radius: var(--radius-sm);
 }
 
 .checkbox-group label {
     margin: 0;
     cursor: pointer;
     user-select: none;
-    font-size: var(--font-size-sm);
+    font-size: var(--font-sm);
+    color: var(--text-secondary);
+    font-weight: var(--font-weight-medium);
 }
+
+/* ========================================================================
+   7. FOOTER DO CARD
+   ======================================================================== */
 
 .auth-footer {
     text-align: center;
-    padding-top: var(--spacing-lg);
-    border-top: 1px solid var(--border-color);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--border-primary);
 }
 
 .auth-footer p {
     margin: 0;
     color: var(--text-secondary);
-    font-size: var(--font-size-sm);
+    font-size: var(--font-sm);
+    line-height: 1.6;
 }
 
 .auth-footer a {
-    color: var(--primary-color);
-    font-weight: 600;
-    transition: var(--transition-fast);
+    color: var(--primary-400);
+    font-weight: var(--font-weight-semibold);
+    transition: all var(--transition-fast);
 }
 
 .auth-footer a:hover {
     text-decoration: underline;
-    color: var(--primary-dark);
+    color: var(--primary-500);
 }
+
+/* ========================================================================
+   8. LINK DE VOLTAR
+   ======================================================================== */
 
 .back-link {
     display: inline-flex;
     align-items: center;
-    gap: var(--spacing-xs);
-    margin-bottom: var(--spacing-md);
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
     color: white;
-    font-weight: 600;
-    transition: var(--transition-fast);
-    padding: var(--spacing-sm) var(--spacing-md);
+    font-weight: var(--font-weight-semibold);
+    transition: all var(--transition-fast);
+    padding: var(--space-3) var(--space-4);
     background: rgba(255, 255, 255, 0.15);
-    border-radius: var(--border-radius);
+    border-radius: var(--radius-lg);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .back-link:hover {
-    transform: translateX(-5px);
+    transform: translateX(-0.3125rem);
     background: rgba(255, 255, 255, 0.25);
     color: white;
+    text-decoration: none;
 }
 
-/* Loading state no botão */
+/* ========================================================================
+   9. LOADING STATE
+   ======================================================================== */
+
 .btn-loading {
     position: relative;
     color: transparent !important;
@@ -238,30 +299,34 @@ body::after {
 .btn-loading::after {
     content: '';
     position: absolute;
-    width: 16px;
-    height: 16px;
+    width: 1rem;
+    height: 1rem;
     top: 50%;
     left: 50%;
-    margin-left: -8px;
-    margin-top: -8px;
+    margin-left: -0.5rem;
+    margin-top: -0.5rem;
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-top-color: white;
-    border-radius: 50%;
+    border-radius: var(--radius-full);
     animation: spin 0.6s linear infinite;
 }
 
-/* Social Login (opcional) */
+/* ========================================================================
+   10. SOCIAL LOGIN (OPCIONAL)
+   ======================================================================== */
+
 .social-login {
-    margin-top: var(--spacing-lg);
-    padding-top: var(--spacing-lg);
-    border-top: 1px solid var(--border-color);
+    margin-top: var(--space-6);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--border-primary);
 }
 
 .social-login-title {
     text-align: center;
     color: var(--text-secondary);
-    font-size: var(--font-size-sm);
-    margin-bottom: var(--spacing-md);
+    font-size: var(--font-sm);
+    font-weight: var(--font-weight-medium);
+    margin-bottom: var(--space-4);
     position: relative;
 }
 
@@ -270,9 +335,9 @@ body::after {
     content: '';
     position: absolute;
     top: 50%;
-    width: 40%;
+    width: 35%;
     height: 1px;
-    background-color: var(--border-color);
+    background-color: var(--border-primary);
 }
 
 .social-login-title::before {
@@ -285,7 +350,7 @@ body::after {
 
 .social-buttons {
     display: flex;
-    gap: var(--spacing-sm);
+    gap: var(--space-3);
 }
 
 .btn-social {
@@ -293,87 +358,148 @@ body::after {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-sm) var(--spacing-md);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    background-color: var(--bg-primary);
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-1);
     color: var(--text-primary);
-    font-size: var(--font-size-sm);
+    font-size: var(--font-sm);
+    font-weight: var(--font-weight-medium);
     cursor: pointer;
-    transition: var(--transition-fast);
+    transition: all var(--transition-fast);
 }
 
 .btn-social:hover {
-    background-color: var(--secondary-color);
-    border-color: var(--border-color-hover);
+    background-color: var(--surface-2);
+    border-color: var(--border-secondary);
     transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
-/* Strength meter para senha */
+/* ========================================================================
+   11. PASSWORD STRENGTH METER
+   ======================================================================== */
+
 .password-strength {
-    margin-top: var(--spacing-xs);
-    height: 4px;
-    background-color: var(--secondary-color);
-    border-radius: 2px;
+    margin-top: var(--space-2);
+    height: 0.25rem;
+    background-color: var(--surface-3);
+    border-radius: var(--radius-full);
     overflow: hidden;
 }
 
 .password-strength-bar {
     height: 100%;
     width: 0;
-    transition: var(--transition);
-    border-radius: 2px;
+    transition: all var(--transition-base);
+    border-radius: var(--radius-full);
 }
 
 .password-strength-bar.weak {
     width: 33%;
-    background-color: var(--danger-color);
+    background: linear-gradient(90deg, var(--error) 0%, #dc2626 100%);
 }
 
 .password-strength-bar.medium {
     width: 66%;
-    background-color: var(--warning-color);
+    background: linear-gradient(90deg, var(--warning) 0%, #d97706 100%);
 }
 
 .password-strength-bar.strong {
     width: 100%;
-    background-color: var(--success-color);
+    background: linear-gradient(90deg, var(--success) 0%, #059669 100%);
 }
 
 .password-strength-text {
-    font-size: var(--font-size-xs);
-    margin-top: var(--spacing-xs);
+    font-size: var(--font-xs);
+    margin-top: var(--space-2);
     text-align: right;
+    font-weight: var(--font-weight-medium);
 }
 
 .password-strength-text.weak {
-    color: var(--danger-color);
+    color: var(--error);
 }
 
 .password-strength-text.medium {
-    color: var(--warning-color);
+    color: var(--warning);
 }
 
 .password-strength-text.strong {
-    color: var(--success-color);
+    color: var(--success);
 }
 
-/* Theme toggle no auth */
+/* ========================================================================
+   12. THEME TOGGLE NO AUTH
+   ======================================================================== */
+
 .auth-theme-toggle {
     position: absolute;
-    top: var(--spacing-lg);
-    right: var(--spacing-lg);
+    top: var(--space-6);
+    right: var(--space-6);
 }
 
-/* Responsividade */
+/* ========================================================================
+   13. ANIMAÇÕES DE ERRO
+   ======================================================================== */
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-0.3125rem); }
+    20%, 40%, 60%, 80% { transform: translateX(0.3125rem); }
+}
+
+.input-error {
+    animation: shake 0.5s ease;
+}
+
+/* Animação de sucesso */
+@keyframes successPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
+.auth-success {
+    animation: successPulse 0.5s ease;
+}
+
+/* ========================================================================
+   14. DARK MODE ESPECÍFICO
+   ======================================================================== */
+
+[data-theme="dark"] body {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+[data-theme="dark"] .auth-card {
+    background-color: rgba(22, 27, 34, 0.95);
+    border-color: var(--border-primary);
+}
+
+[data-theme="dark"] .back-link {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="dark"] body::before {
+    background: 
+        radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+}
+
+/* ========================================================================
+   15. RESPONSIVIDADE
+   ======================================================================== */
+
 @media (max-width: 768px) {
     .auth-container {
-        padding: var(--spacing-md);
+        padding: var(--space-4);
     }
     
     .auth-card {
-        padding: var(--spacing-lg);
+        padding: var(--space-6);
     }
     
     .auth-title {
@@ -383,16 +509,20 @@ body::after {
     .auth-logo {
         font-size: 3rem;
     }
+    
+    body {
+        padding: var(--space-3);
+    }
 }
 
 @media (max-width: 480px) {
     .auth-container {
-        padding: var(--spacing-sm);
+        padding: var(--space-3);
     }
 
     .auth-card {
-        padding: var(--spacing-md);
-        border-radius: var(--border-radius-lg);
+        padding: var(--space-5);
+        border-radius: var(--radius-xl);
     }
 
     .social-buttons {
@@ -402,41 +532,47 @@ body::after {
     .btn-social {
         width: 100%;
     }
+    
+    .auth-theme-toggle {
+        top: var(--space-4);
+        right: var(--space-4);
+    }
+    
+    body {
+        padding: var(--space-2);
+    }
 }
 
-/* Dark mode específico para auth */
-[data-theme="dark"] body {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+/* ========================================================================
+   16. MELHORIAS DE UX
+   ======================================================================== */
+
+/* Focus visível para acessibilidade */
+.auth-form input:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
 }
 
-[data-theme="dark"] .auth-card {
-    background-color: rgba(36, 37, 38, 0.95);
-    border-color: var(--border-color);
+/* Transição suave no hover dos inputs */
+.auth-form input:hover:not(:focus) {
+    border-color: var(--border-secondary);
 }
 
-[data-theme="dark"] .back-link {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.15);
+/* Indicador visual de campo preenchido */
+.auth-form input:valid:not(:placeholder-shown) {
+    border-color: var(--success);
 }
 
-/* Animação de erro */
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-    20%, 40%, 60%, 80% { transform: translateX(5px); }
+/* Animação sutil no foco do input */
+@keyframes inputFocus {
+    0% { box-shadow: 0 0 0 0 rgba(0, 115, 230, 0.4); }
+    100% { box-shadow: 0 0 0 3px rgba(0, 115, 230, 0.1); }
 }
 
-.input-error {
-    animation: shake 0.5s ease;
+.auth-form input:focus {
+    animation: inputFocus 0.2s ease;
 }
 
-/* Success animation */
-@keyframes success-pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-}
-
-.auth-success {
-    animation: success-pulse 0.5s ease;
-}
+/* ========================================================================
+   FIM DO ARQUIVO
+   ======================================================================== */
