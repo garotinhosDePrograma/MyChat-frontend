@@ -1,22 +1,32 @@
-/* Landing Page Styles - Modern UI/UX */
+/* ========================================================================
+   MyChat - Landing Page CSS v2.0
+   Design Moderno e Impactante
+   ======================================================================== */
 
-/* Container */
+/* ========================================================================
+   1. CONTAINER GLOBAL
+   ======================================================================== */
+
 .container {
-    max-width: 1200px;
+    max-width: 75rem;
     margin: 0 auto;
-    padding: 0 var(--spacing-lg);
+    padding: 0 var(--space-6);
 }
 
-/* Header */
+/* ========================================================================
+   2. HEADER
+   ======================================================================== */
+
 .header {
-    background-color: var(--bg-primary);
+    background-color: var(--surface-1);
     box-shadow: var(--shadow-sm);
-    padding: var(--spacing-md) 0;
+    padding: var(--space-4) 0;
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: var(--z-sticky);
     backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-primary);
+    transition: all var(--transition-base);
 }
 
 .header-content {
@@ -28,27 +38,31 @@
 .logo {
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm);
+    gap: var(--space-3);
 }
 
 .logo h1 {
-    font-size: var(--font-size-xl);
+    font-size: var(--font-xl);
     margin: 0;
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+    background: linear-gradient(135deg, var(--primary-400) 0%, var(--primary-600) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    font-weight: var(--font-weight-bold);
 }
 
 .nav {
     display: flex;
-    gap: var(--spacing-md);
+    gap: var(--space-4);
     align-items: center;
 }
 
-/* Hero Section */
+/* ========================================================================
+   3. HERO SECTION
+   ======================================================================== */
+
 .hero {
-    padding: 100px 0;
+    padding: 6.25rem 0;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     position: relative;
@@ -63,28 +77,28 @@
     right: 0;
     bottom: 0;
     background: 
-        radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+        radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
     pointer-events: none;
 }
 
 .hero .container {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 60px;
+    gap: 3.75rem;
     align-items: center;
     position: relative;
     z-index: 1;
 }
 
 .hero-content {
-    animation: slideInLeft 0.8s ease;
+    animation: slideInLeft 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes slideInLeft {
     from {
         opacity: 0;
-        transform: translateX(-50px);
+        transform: translateX(-3.125rem);
     }
     to {
         opacity: 1;
@@ -94,21 +108,21 @@
 
 .hero-title {
     font-size: clamp(2.5rem, 6vw, 3.5rem);
-    margin-bottom: var(--spacing-md);
+    margin-bottom: var(--space-5);
     line-height: 1.1;
-    font-weight: 700;
+    font-weight: var(--font-weight-bold);
 }
 
 .hero-subtitle {
     font-size: clamp(1rem, 2vw, 1.25rem);
-    margin-bottom: var(--spacing-xl);
+    margin-bottom: var(--space-8);
     opacity: 0.95;
-    line-height: 1.6;
+    line-height: 1.7;
 }
 
 .hero-buttons {
     display: flex;
-    gap: var(--spacing-md);
+    gap: var(--space-4);
     flex-wrap: wrap;
 }
 
@@ -117,26 +131,30 @@
 }
 
 .hero-buttons .btn-secondary {
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: rgba(255, 255, 255, 0.15);
     color: white;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .hero-buttons .btn-secondary:hover {
-    background-color: rgba(255, 255, 255, 0.3);
+    background-color: rgba(255, 255, 255, 0.25);
     transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
-/* Chat Preview */
+/* ========================================================================
+   4. CHAT PREVIEW
+   ======================================================================== */
+
 .hero-image {
-    animation: slideInRight 0.8s ease;
+    animation: slideInRight 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes slideInRight {
     from {
         opacity: 0;
-        transform: translateX(50px);
+        transform: translateX(3.125rem);
     }
     to {
         opacity: 1;
@@ -146,8 +164,8 @@
 
 .chat-preview {
     background: rgba(255, 255, 255, 0.1);
-    border-radius: var(--border-radius-xl);
-    padding: var(--spacing-xl);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-8);
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
@@ -155,9 +173,9 @@
 
 .chat-bubble {
     max-width: 75%;
-    padding: 14px 18px;
-    border-radius: 18px;
-    margin-bottom: var(--spacing-md);
+    padding: var(--space-4) var(--space-5);
+    border-radius: var(--radius-xl);
+    margin-bottom: var(--space-4);
     animation: fadeInBubble 0.5s ease;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
@@ -165,7 +183,7 @@
 @keyframes fadeInBubble {
     from {
         opacity: 0;
-        transform: translateY(10px) scale(0.95);
+        transform: translateY(0.625rem) scale(0.95);
     }
     to {
         opacity: 1;
@@ -176,13 +194,13 @@
 .chat-bubble.left {
     background-color: rgba(255, 255, 255, 0.25);
     margin-right: auto;
-    border-bottom-left-radius: 4px;
+    border-bottom-left-radius: var(--radius-sm);
 }
 
 .chat-bubble.right {
     background: linear-gradient(135deg, #0084ff 0%, #0066cc 100%);
     margin-left: auto;
-    border-bottom-right-radius: 4px;
+    border-bottom-right-radius: var(--radius-sm);
 }
 
 .chat-bubble:nth-child(1) {
@@ -199,23 +217,27 @@
 
 .chat-bubble p {
     margin: 0;
-    font-size: var(--font-size-base);
+    font-size: var(--font-base);
     line-height: 1.5;
 }
 
-/* Features Section */
+/* ========================================================================
+   5. FEATURES SECTION
+   ======================================================================== */
+
 .features {
-    padding: 100px 0;
-    background-color: var(--bg-primary);
+    padding: 6.25rem 0;
+    background-color: var(--surface-1);
 }
 
 .section-title {
     text-align: center;
     font-size: clamp(2rem, 5vw, 2.5rem);
-    margin-bottom: var(--spacing-xl);
+    margin-bottom: var(--space-8);
     color: var(--text-primary);
     position: relative;
-    padding-bottom: var(--spacing-md);
+    padding-bottom: var(--space-4);
+    font-weight: var(--font-weight-bold);
 }
 
 .section-title::after {
@@ -224,26 +246,26 @@
     bottom: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: 80px;
+    width: 5rem;
     height: 4px;
-    background: linear-gradient(90deg, var(--primary-color) 0%, var(--accent-color) 100%);
-    border-radius: 2px;
+    background: linear-gradient(90deg, var(--primary-400) 0%, var(--primary-600) 100%);
+    border-radius: var(--radius-full);
 }
 
 .features-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: var(--spacing-xl);
-    margin-top: var(--spacing-xl);
+    grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr));
+    gap: var(--space-8);
+    margin-top: var(--space-8);
 }
 
 .feature-card {
     text-align: center;
-    padding: var(--spacing-xl);
-    border-radius: var(--border-radius-xl);
-    transition: var(--transition);
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
+    padding: var(--space-8);
+    border-radius: var(--radius-2xl);
+    transition: all var(--transition-base);
+    background-color: var(--surface-2);
+    border: 1px solid var(--border-primary);
     position: relative;
     overflow: hidden;
 }
@@ -255,16 +277,16 @@
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, var(--primary-color) 0%, var(--accent-color) 100%);
+    background: linear-gradient(90deg, var(--primary-400) 0%, var(--primary-600) 100%);
     transform: scaleX(0);
     transform-origin: left;
-    transition: var(--transition);
+    transition: transform var(--transition-base);
 }
 
 .feature-card:hover {
-    transform: translateY(-8px);
-    box-shadow: var(--shadow-lg);
-    border-color: var(--primary-color);
+    transform: translateY(-0.5rem);
+    box-shadow: var(--shadow-xl);
+    border-color: var(--primary-400);
 }
 
 .feature-card:hover::before {
@@ -273,14 +295,14 @@
 
 .feature-icon {
     font-size: 3.5rem;
-    margin-bottom: var(--spacing-md);
+    margin-bottom: var(--space-4);
     display: inline-block;
     animation: float 3s ease-in-out infinite;
 }
 
 @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-0.625rem); }
 }
 
 .feature-card:nth-child(1) .feature-icon { animation-delay: 0s; }
@@ -291,20 +313,24 @@
 .feature-card:nth-child(6) .feature-icon { animation-delay: 1s; }
 
 .feature-card h4 {
-    font-size: var(--font-size-xl);
-    margin-bottom: var(--spacing-sm);
+    font-size: var(--font-xl);
+    margin-bottom: var(--space-3);
     color: var(--text-primary);
+    font-weight: var(--font-weight-bold);
 }
 
 .feature-card p {
     color: var(--text-secondary);
     margin: 0;
-    line-height: 1.6;
+    line-height: 1.7;
 }
 
-/* CTA Section */
+/* ========================================================================
+   6. CTA SECTION
+   ======================================================================== */
+
 .cta {
-    padding: 100px 0;
+    padding: 6.25rem 0;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     text-align: center;
@@ -320,8 +346,8 @@
     right: 0;
     bottom: 0;
     background: 
-        radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 70% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+        radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 70% 50%, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
     pointer-events: none;
 }
 
@@ -332,23 +358,25 @@
 
 .cta h3 {
     font-size: clamp(2rem, 5vw, 2.5rem);
-    margin-bottom: var(--spacing-md);
-    font-weight: 700;
+    margin-bottom: var(--space-4);
+    font-weight: var(--font-weight-bold);
 }
 
 .cta p {
     font-size: clamp(1rem, 2vw, 1.25rem);
-    margin-bottom: var(--spacing-xl);
+    margin-bottom: var(--space-8);
     opacity: 0.95;
-    max-width: 600px;
+    max-width: 37.5rem;
     margin-left: auto;
     margin-right: auto;
+    line-height: 1.7;
 }
 
 .cta .btn {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
     background-color: white;
-    color: var(--primary-color);
+    color: var(--primary-500);
+    font-weight: var(--font-weight-bold);
 }
 
 .cta .btn:hover {
@@ -356,32 +384,38 @@
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
 }
 
-/* Footer */
+/* ========================================================================
+   7. FOOTER
+   ======================================================================== */
+
 .footer {
-    padding: var(--spacing-xl) 0;
-    background-color: var(--bg-tertiary);
+    padding: var(--space-8) 0;
+    background-color: var(--surface-3);
     color: var(--text-secondary);
     text-align: center;
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-primary);
 }
 
 .footer p {
     margin: 0;
-    font-size: var(--font-size-sm);
+    font-size: var(--font-sm);
 }
 
 .footer a {
-    color: var(--primary-color);
-    font-weight: 600;
+    color: var(--primary-400);
+    font-weight: var(--font-weight-semibold);
 }
 
-/* Stats Section (Opcional - pode adicionar) */
+/* ========================================================================
+   8. STATS SECTION (OPCIONAL)
+   ======================================================================== */
+
 .stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: var(--spacing-lg);
-    margin-top: var(--spacing-xl);
-    padding-top: var(--spacing-xl);
+    grid-template-columns: repeat(auto-fit, minmax(12.5rem, 1fr));
+    gap: var(--space-6);
+    margin-top: var(--space-8);
+    padding-top: var(--space-8);
     border-top: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -391,8 +425,8 @@
 
 .stat-number {
     font-size: clamp(2rem, 4vw, 3rem);
-    font-weight: 700;
-    margin-bottom: var(--spacing-xs);
+    font-weight: var(--font-weight-bold);
+    margin-bottom: var(--space-2);
     background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.8) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -400,15 +434,18 @@
 }
 
 .stat-label {
-    font-size: var(--font-size-sm);
+    font-size: var(--font-sm);
     opacity: 0.9;
 }
 
-/* Responsividade */
+/* ========================================================================
+   9. RESPONSIVIDADE
+   ======================================================================== */
+
 @media (max-width: 968px) {
     .hero .container {
         grid-template-columns: 1fr;
-        gap: var(--spacing-xl);
+        gap: var(--space-8);
     }
     
     .hero-image {
@@ -417,23 +454,23 @@
     
     .features-grid {
         grid-template-columns: 1fr;
-        gap: var(--spacing-lg);
+        gap: var(--space-6);
     }
 
     .hero {
-        padding: 60px 0;
+        padding: 3.75rem 0;
     }
 
     .features,
     .cta {
-        padding: 60px 0;
+        padding: 3.75rem 0;
     }
 }
 
 @media (max-width: 768px) {
     .header-content {
         flex-direction: column;
-        gap: var(--spacing-md);
+        gap: var(--space-4);
     }
     
     .nav {
@@ -442,7 +479,7 @@
     }
     
     .hero {
-        padding: 40px 0;
+        padding: 2.5rem 0;
     }
     
     .hero-buttons {
@@ -455,25 +492,41 @@
 
     .features,
     .cta {
-        padding: 40px 0;
+        padding: 2.5rem 0;
     }
 
     .stats {
         grid-template-columns: 1fr;
-        gap: var(--spacing-md);
+        gap: var(--space-4);
+    }
+    
+    .container {
+        padding: 0 var(--space-4);
     }
 }
 
 @media (max-width: 480px) {
-    .container {
-        padding: 0 var(--spacing-md);
-    }
-
     .chat-bubble {
         max-width: 85%;
     }
 
     .feature-card {
-        padding: var(--spacing-lg);
+        padding: var(--space-6);
+    }
+    
+    .container {
+        padding: 0 var(--space-3);
+    }
+    
+    .hero-title {
+        font-size: 2rem;
+    }
+    
+    .section-title {
+        font-size: 1.75rem;
     }
 }
+
+/* ========================================================================
+   FIM DO ARQUIVO
+   ======================================================================== */
