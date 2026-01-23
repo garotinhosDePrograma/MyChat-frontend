@@ -1,4 +1,4 @@
-// Dashboard Logic - VERSÃO CORRIGIDA (BUGS FIXADOS)
+// Dashboard Logic - VERSÃO CORRIGIDA (Bugs de duplicação e contador fixados)
 
 // Estado global
 const state = {
@@ -81,12 +81,10 @@ async function init() {
 }
 
 function showNotificationBanner() {
-    // Evitar duplicatas
     if (document.querySelector('.notification-banner')) {
         return;
     }
 
-    // Não mostrar se já foi dispensado nesta sessão
     if (sessionStorage.getItem('notification-banner-dismissed')) {
         return;
     }
@@ -151,7 +149,7 @@ function setupSocketHandlers() {
         return;
     }
 
-    // Nova mensagem recebida
+    // ✅ FIX: Nova mensagem recebida - atualizar contador
     socketManager.on('newMessage', (message) => {
         console.log("Nova mensagem recebida:", message);
 
@@ -166,6 +164,9 @@ function setupSocketHandlers() {
             if (message.receiver_id === state.currentUser.id) {
                 socketManager.markAsRead(message.sender_id);
             }
+        } else {
+            // ✅ FIX: Atualizar contador se não estiver na conversa aberta
+            updateContactUnreadCount(message.sender_id);
         }
 
         if (message.receiver_id === state.currentUser.id) {
@@ -179,30 +180,23 @@ function setupSocketHandlers() {
                     sender.contact_name || sender.user_name,
                     null
                 );
-            } else {
-                console.log("Notificação não mostrada:", {
-                    reason: !sender ? "Remetente não encontrado" : "Notificações desativadas"
-                });
             }
         }
         
         loadContacts();
     });
 
-    // Notificação de mensagem
     socketManager.on('messageNotification', (data) => {
         Utils.showToast(`${data.from_user.name}: ${data.message.content.substring(0, 50)}`, 'info', 5000);
         loadContacts();
     });
 
-    // Usuário digitando
     socketManager.on('userTyping', (data) => {
         if (state.selectedContact && data.user_id === state.selectedContact.contact_user_id) {
             showTypingIndicator(data.name);
         }
     });
 
-    // Usuário parou de digitar
     socketManager.on('userStoppedTyping', (data) => {
         if (state.selectedContact && data.user_id === state.selectedContact.contact_user_id) {
             hideTypingIndicator();
@@ -216,6 +210,29 @@ function setupSocketHandlers() {
     socketManager.on('userOffline', (data) => {
         updateContactStatus(data.user_id, false);
     });
+
+    // ✅ FIX: Atualizar contador quando mensagens forem lidas
+    socketManager.on('messagesRead', (data) => {
+        console.log('Mensagens marcadas como lidas:', data);
+        // Atualizar UI do remetente
+        if (data.sender_id === state.currentUser.id) {
+            updateContactUnreadCount(data.reader_id, 0);
+        }
+    });
+}
+
+// ✅ NOVO: Atualizar contador de não lidas de um contato específico
+function updateContactUnreadCount(contactUserId, count = null) {
+    const contact = state.contacts.find(c => c.contact_user_id === contactUserId);
+    if (!contact) return;
+
+    if (count !== null) {
+        contact.unread_count = count;
+    } else {
+        contact.unread_count = (contact.unread_count || 0) + 1;
+    }
+
+    renderContacts();
 }
 
 // Event Listeners
@@ -314,7 +331,7 @@ function renderContacts() {
                     ${contact.last_message_time ? `<span class="contact-time">${Utils.formatDate(contact.last_message_time)}</span>` : ''}
                 </div>
                 ${contact.last_message ? `
-                    <div class="contact-last-message">
+                    <div class="contact-last-message ${contact.unread_count > 0 ? 'unread' : ''}">
                         ${Utils.escapeHtml(Utils.truncateText(contact.last_message, 40))}
                     </div>
                 ` : ''}
@@ -333,7 +350,7 @@ function renderContacts() {
     });
 }
 
-// Selecionar contato
+// ✅ FIX: Selecionar contato - zerar contador
 function selectContact(contactUserId) {
     const contact = state.contacts.find(c => c.contact_user_id === contactUserId);
     if (!contact) return;
@@ -348,6 +365,10 @@ function selectContact(contactUserId) {
     }
     
     state.selectedContact = contact;
+    
+    // ✅ FIX: Zerar contador de não lidas localmente
+    contact.unread_count = 0;
+    
     renderContacts();
     loadConversation(contactUserId);
     
@@ -381,7 +402,6 @@ function selectContact(contactUserId) {
 
 const conversationCache = new Map();
 
-// ✅ FIX: Corrigido nome da variável de 'erro' para 'error'
 async function loadConversation(contactUserId) {
     try {
         const cached = conversationCache.get(contactUserId);
@@ -407,7 +427,7 @@ async function loadConversation(contactUserId) {
                 elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
             }
         }, 100);
-    } catch (error) { // ✅ FIX: era 'erro'
+    } catch (error) {
         console.error("Erro ao carregar conversas:", error);
         Utils.showToast("Erro ao carregar mensagens", "error");
     }
@@ -451,11 +471,10 @@ function updateContactListOnNewMessage(message) {
     }
 }
 
-// ✅ FIX: Corrigido wasAtButton para wasAtBottom
 function renderMessages() {
     if (!elements.chatMessages) return;
 
-    const wasAtBottom = Utils.isScrolledToBottom(elements.chatMessages, 100); // ✅ FIX
+    const wasAtBottom = Utils.isScrolledToBottom(elements.chatMessages, 100);
 
     elements.chatMessages.innerHTML = state.messages.map(msg => {
         const isSent = msg.sender_id === state.currentUser.id;
@@ -488,7 +507,7 @@ function renderMessages() {
         `;
     }).join('');
 
-    if (wasAtBottom || state.messages.length <= 10) { // ✅ FIX
+    if (wasAtBottom || state.messages.length <= 10) {
         setTimeout(() => {
             Utils.scrollToBottom(elements.chatMessages, 'auto');
         }, 50);
@@ -516,8 +535,7 @@ async function retryMessage(messageId) {
     await handleSendMessage({ preventDefault: () => {} });
 }
 
-// ✅ FIX: Corrigido state.message para state.messages
-
+// ✅ FIX PRINCIPAL: Enviar mensagem sem duplicação
 async function handleSendMessage(e) {
     e.preventDefault();
 
@@ -568,12 +586,11 @@ async function handleSendMessage(e) {
     try {
         console.log('📤 Enviando mensagem...');
         
-        // ✅ CORREÇÃO PRINCIPAL: Tentar WebSocket primeiro
+        // ✅ Tentar WebSocket primeiro
         if (typeof socketManager !== 'undefined' && socketManager.connected) {
             console.log('🔌 Usando WebSocket...');
             
             try {
-                // ✅ Agora sendMessage retorna Promise
                 serverMessage = await socketManager.sendMessage(
                     state.selectedContact.contact_user_id,
                     content,
@@ -583,7 +600,7 @@ async function handleSendMessage(e) {
                 console.log('✅ Mensagem confirmada via WebSocket:', serverMessage);
             } catch (wsError) {
                 console.warn('⚠️ WebSocket falhou, tentando API REST...', wsError);
-                serverMessage = null; // Vai cair no fallback abaixo
+                serverMessage = null;
             }
         }
 
@@ -599,17 +616,24 @@ async function handleSendMessage(e) {
             console.log('✅ Mensagem confirmada via API REST:', serverMessage);
         }
 
-        // ✅ Atualizar mensagem otimista com dados reais do servidor
+        // ✅ FIX: Substituir mensagem otimista pela mensagem real do servidor
         const index = state.messages.findIndex(m => m.id === tempId);
         if (index !== -1) {
-            state.messages[index] = {
+            // ✅ CRUCIAL: Remover a otimista e adicionar a real
+            state.messages.splice(index, 1);
+            
+            // ✅ Adicionar mensagem do servidor com status 'sent'
+            state.messages.push({
                 ...serverMessage,
                 status: 'sent'
-            };
-            state.pendingMessages.delete(tempId);
-            renderMessages();
+            });
             
-            console.log('✅ Mensagem atualizada na UI');
+            state.pendingMessages.delete(tempId);
+            
+            console.log('✅ Mensagem otimista substituída pela real');
+            
+            renderMessages();
+            Utils.scrollToBottom(elements.chatMessages, 'auto');
         }
 
         updateContactListOnNewMessage(serverMessage);
@@ -624,35 +648,6 @@ async function handleSendMessage(e) {
 
         Utils.showToast("Erro ao enviar. Toque para reenviar.", "error", 5000);
     }
-}
-    
-function sendMessageViaWebSocket(receiverId, content, tempId) {
-    return new Promise((resolve, reject) => {
-        if (!socketManager || !socketManager.connected) {
-            reject(new Error('WebSocket não conectado'));
-            return;
-        }
-
-        const timeout = setTimeout(() => {
-            reject(new Error('Timeout ao enviar mensagem'));
-        }, 5000);
-
-        const listener = (data) => {
-            if (data.temp_id === tempId) {
-                clearTimeout(timeout);
-                socketManager.off('message_confirmed', listener);
-                resolve(data.message);
-            }
-        };
-
-        socketManager.on('message_confirmed', listener);
-
-        socketManager.socket.emit('send_message', {
-            receiver_id: receiverId,
-            content: content,
-            temp_id: tempId
-        });
-    });
 }
 
 function autoResizeTextarea() {
@@ -787,7 +782,6 @@ function renderSearchResults(users) {
     `).join('');
 }
 
-// ✅ FIX: Corrigido data.message para error.message
 async function addContact(userId, name) {
     try {
         const tempId = `temp_${Date.now()}`;
@@ -824,13 +818,9 @@ async function addContact(userId, name) {
         renderContacts();
 
         console.error("Erro ao adicionar contato:", error);
-        Utils.showToast(error.message || "Erro ao adicionar contato", "error"); // ✅ FIX: era data.message
+        Utils.showToast(error.message || "Erro ao adicionar contato", "error");
     }
 }
-
-// ============================================================================
-// Injetar estilos de status de mensagens (Design System v2.0)
-// ============================================================================
 
 function injectMessageStatusStyles() {
     if (document.getElementById('message-status-styles')) {
@@ -840,8 +830,6 @@ function injectMessageStatusStyles() {
     const styles = document.createElement('style');
     styles.id = 'message-status-styles';
     styles.textContent = `
-        /* MESSAGE STATUS STYLES - Design System v2.0 */
-        
         .message-status {
             font-size: var(--font-xs);
             margin-left: var(--space-1);
@@ -1027,7 +1015,6 @@ async function requestPushPermission() {
     }
 }
 
-// Expor globalmente
 window.requestPushPermission = requestPushPermission;
 
 function debugNotifications() {
@@ -1073,7 +1060,7 @@ window.testNotificationNow = () => {
     );
 };
 
-injectMessagesStatusStyles();
+injectMessageStatusStyles();
 
 if (notificationManager.isSupported && !notificationManager.isEnabled()) {
     setTimeout(() => {
