@@ -342,12 +342,18 @@ function renderContacts() {
         </div>
     `).join('');
     
-    document.querySelectorAll('.contact-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const contactId = parseInt(item.dataset.contactId);
-            selectContact(contactId);
-        });
-    });
+    elements.contactsList.removeEventListener('click', handleContactClick);
+    elements.contactsList.addEventListener('click', handleContactClick);
+}
+
+handleContactClick(e) {
+    const contactItem = e.target.closest('.contact-item');
+    if (!contactItem) return;
+
+    const contactId = parseInt(contactItem.dataset.contactId);
+    if (!isNaN(contactId)) {
+        selectContact(contactId);
+    }
 }
 
 // ✅ FIX: Selecionar contato - zerar contador
