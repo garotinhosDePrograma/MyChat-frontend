@@ -346,7 +346,7 @@ function renderContacts() {
     elements.contactsList.addEventListener('click', handleContactClick);
 }
 
-handleContactClick(e) {
+function handleContactClick(e) {
     const contactItem = e.target.closest('.contact-item');
     if (!contactItem) return;
 
