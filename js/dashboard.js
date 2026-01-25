@@ -541,7 +541,7 @@ async function retryMessage(messageId) {
     await handleSendMessage({ preventDefault: () => {} });
 }
 
-// ✅ FIX PRINCIPAL: Enviar mensagem sem duplicação
+// ✅ FIX COMPLETO: Enviar mensagem sem duplicação e race conditions
 async function handleSendMessage(e) {
     e.preventDefault();
 
@@ -587,6 +587,8 @@ async function handleSendMessage(e) {
         socketManager.stopTyping(state.selectedContact.contact_user_id);
     }
 
+    // ✅ FIX: Flag para controlar se já recebeu confirmação
+    let messageConfirmed = false;
     let serverMessage = null;
 
     try {
@@ -603,14 +605,15 @@ async function handleSendMessage(e) {
                     tempId
                 );
                 
+                messageConfirmed = true; // ✅ Marcar como confirmado
                 console.log('✅ Mensagem confirmada via WebSocket:', serverMessage);
             } catch (wsError) {
                 console.warn('⚠️ WebSocket falhou, tentando API REST...', wsError);
-                serverMessage = null;
             }
         }
 
-        if (!serverMessage) {
+        // ✅ FIX: Só usar REST se WebSocket falhou
+        if (!messageConfirmed) {
             console.log('📡 Usando API REST...');
             
             const response = await API.sendMessage(
@@ -619,27 +622,36 @@ async function handleSendMessage(e) {
             );
             
             serverMessage = response.data.message;
+            messageConfirmed = true; // ✅ Marcar como confirmado
             console.log('✅ Mensagem confirmada via API REST:', serverMessage);
         }
 
-        // ✅ FIX: Substituir mensagem otimista pela mensagem real do servidor
+        // ✅ FIX: Verificar se a mensagem otimista ainda existe antes de substituir
         const index = state.messages.findIndex(m => m.id === tempId);
         if (index !== -1) {
-            // ✅ CRUCIAL: Remover a otimista e adicionar a real
-            state.messages.splice(index, 1);
-            
-            // ✅ Adicionar mensagem do servidor com status 'sent'
-            state.messages.push({
-                ...serverMessage,
-                status: 'sent'
-            });
+            // ✅ Verificar se não há duplicação com o ID real do servidor
+            const isDuplicate = state.messages.some(m => 
+                m.id === serverMessage.id && m.id !== tempId
+            );
+
+            if (isDuplicate) {
+                console.warn('⚠️ Mensagem duplicada detectada, removendo apenas a otimista');
+                state.messages.splice(index, 1);
+            } else {
+                // Substituir otimista pela real
+                state.messages.splice(index, 1, {
+                    ...serverMessage,
+                    status: 'sent'
+                });
+            }
             
             state.pendingMessages.delete(tempId);
-            
             console.log('✅ Mensagem otimista substituída pela real');
             
             renderMessages();
             Utils.scrollToBottom(elements.chatMessages, 'auto');
+        } else {
+            console.warn('⚠️ Mensagem otimista já foi removida (possível race condition evitada)');
         }
 
         updateContactListOnNewMessage(serverMessage);
