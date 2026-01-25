@@ -214,6 +214,9 @@ function setupSocketHandlers() {
     // ✅ FIX: Atualizar contador quando mensagens forem lidas
     socketManager.on('messagesRead', (data) => {
         console.log('Mensagens marcadas como lidas:', data);
+        if (data.reader_id === state.currentUser.id) {
+            updateContactUnreadCount(data.sender_id, 0);
+        }
         // Atualizar UI do remetente
         if (data.sender_id === state.currentUser.id) {
             updateContactUnreadCount(data.reader_id, 0);
@@ -233,6 +236,10 @@ function updateContactUnreadCount(contactUserId, count = null) {
     }
 
     renderContacts();
+
+    if (count === 0 && typeof socketManager !== 'undefined' && socketManager.connected) {
+        socketManager.markAsRead(contactUserId);
+    }
 }
 
 // Event Listeners
@@ -356,7 +363,7 @@ function handleContactClick(e) {
     }
 }
 
-// ✅ FIX: Selecionar contato - zerar contador
+// ✅ FIX: Selecionar contato - zerar contador E sincronizar
 function selectContact(contactUserId) {
     const contact = state.contacts.find(c => c.contact_user_id === contactUserId);
     if (!contact) return;
@@ -372,7 +379,8 @@ function selectContact(contactUserId) {
     
     state.selectedContact = contact;
     
-    // ✅ FIX: Zerar contador de não lidas localmente
+    // ✅ FIX: Zerar contador localmente E no servidor
+    const hadUnread = contact.unread_count > 0;
     contact.unread_count = 0;
     
     renderContacts();
@@ -380,7 +388,11 @@ function selectContact(contactUserId) {
     
     if (typeof socketManager !== 'undefined' && socketManager.connected) {
         socketManager.joinConversation(contactUserId);
-        socketManager.markAsRead(contactUserId);
+        
+        // ✅ Só marcar como lido se realmente tinha mensagens não lidas
+        if (hadUnread) {
+            socketManager.markAsRead(contactUserId);
+        }
     }
     
     if (elements.chatArea) {
