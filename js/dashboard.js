@@ -553,7 +553,7 @@ async function retryMessage(messageId) {
     await handleSendMessage({ preventDefault: () => {} });
 }
 
-// ✅ FIX DEFINITIVO: Enviar mensagem sem duplicação, rápido e confiável
+// ✅ FIX DEFINITIVO v2: Enviar mensagem SEM duplicação (cancela REST se WS responder)
 async function handleSendMessage(e) {
     e.preventDefault();
 
@@ -600,54 +600,62 @@ async function handleSendMessage(e) {
 
     let serverMessage = null;
     let usedMethod = null;
+    let messageSent = false; // ✅ Flag para evitar dupla confirmação
 
     try {
         console.log('📤 Enviando mensagem...');
         
-        // ✅ Tentar WebSocket E REST em paralelo, usar o primeiro que responder
-        const wsPromise = (typeof socketManager !== 'undefined' && socketManager.connected)
-            ? socketManager.sendMessage(state.selectedContact.contact_user_id, content, tempId)
-                .then(msg => ({ message: msg, method: 'websocket' }))
-                .catch(err => {
-                    console.warn('⚠️ WebSocket falhou:', err);
-                    return null;
-                })
-            : Promise.resolve(null);
-
-        const restPromise = API.sendMessage(state.selectedContact.contact_user_id, content)
-            .then(response => ({ message: response.data.message, method: 'rest' }))
-            .catch(err => {
-                console.warn('⚠️ REST API falhou:', err);
-                return null;
-            });
-
-        // ✅ Race: usa o primeiro que responder com sucesso
-        const results = await Promise.all([wsPromise, restPromise]);
-        const successfulResult = results.find(r => r !== null);
-
-        if (!successfulResult) {
-            throw new Error('Ambos WebSocket e REST falharam');
+        // ✅ Tentar WebSocket primeiro
+        if (typeof socketManager !== 'undefined' && socketManager.connected) {
+            try {
+                serverMessage = await socketManager.sendMessage(
+                    state.selectedContact.contact_user_id, 
+                    content, 
+                    tempId
+                );
+                
+                messageSent = true;
+                usedMethod = 'websocket';
+                console.log('✅ Mensagem confirmada via WebSocket:', serverMessage);
+            } catch (wsError) {
+                console.warn('⚠️ WebSocket falhou/timeout:', wsError);
+                // Continua para REST
+            }
         }
 
-        serverMessage = successfulResult.message;
-        usedMethod = successfulResult.method;
-        
-        console.log(`✅ Mensagem confirmada via ${usedMethod.toUpperCase()}:`, serverMessage);
+        // ✅ Só usar REST se WebSocket falhou
+        if (!messageSent) {
+            console.log('📡 Fallback para REST API...');
+            
+            const response = await API.sendMessage(
+                state.selectedContact.contact_user_id, 
+                content
+            );
+            
+            serverMessage = response.data.message;
+            messageSent = true;
+            usedMethod = 'rest';
+            console.log('✅ Mensagem confirmada via REST:', serverMessage);
+        }
+
+        if (!serverMessage) {
+            throw new Error('Falha ao enviar mensagem');
+        }
+
+        console.log(`✅ Usando método: ${usedMethod.toUpperCase()}`);
 
         // ✅ Substituir otimista IMEDIATAMENTE
         const index = state.messages.findIndex(m => m.id === tempId);
         
         if (index !== -1) {
-            // Verificar duplicação
-            const isDuplicate = state.messages.some(m => 
-                m.id === serverMessage.id && m.id !== tempId
-            );
-
-            if (isDuplicate) {
+            // ✅ Verificar se já existe mensagem com este ID real
+            const existingIndex = state.messages.findIndex(m => m.id === serverMessage.id);
+            
+            if (existingIndex !== -1 && existingIndex !== index) {
                 console.warn('⚠️ Mensagem duplicada detectada, removendo apenas a otimista');
                 state.messages.splice(index, 1);
             } else {
-                // ✅ Substituir no mesmo índice para não "pular" visualmente
+                // Substituir no mesmo índice
                 state.messages[index] = {
                     ...serverMessage,
                     status: 'sent'
@@ -655,8 +663,6 @@ async function handleSendMessage(e) {
             }
             
             state.pendingMessages.delete(tempId);
-            
-            // ✅ Re-renderizar APENAS se necessário (otimização)
             renderMessages();
         }
 
@@ -665,11 +671,11 @@ async function handleSendMessage(e) {
     } catch (error) {
         console.error("❌ ERRO ao enviar mensagem:", error);
 
-        // ✅ Marcar como erro para retry
+        // ✅ Marcar como erro
         const index = state.messages.findIndex(m => m.id === tempId);
         if (index !== -1) {
             state.messages[index].status = 'error';
-            state.pendingMessages.delete(tempId); // ✅ Limpar pendente
+            state.pendingMessages.delete(tempId);
             renderMessages();
         }
 
