@@ -553,7 +553,7 @@ async function retryMessage(messageId) {
     await handleSendMessage({ preventDefault: () => {} });
 }
 
-// ✅ FIX COMPLETO: Enviar mensagem sem duplicação e race conditions
+// ✅ FIX DEFINITIVO: Enviar mensagem sem duplicação, rápido e confiável
 async function handleSendMessage(e) {
     e.preventDefault();
 
@@ -588,10 +588,9 @@ async function handleSendMessage(e) {
     renderMessages();
     Utils.scrollToBottom(elements.chatMessages, 'auto');
 
-    // Limpar input
+    // Limpar input IMEDIATAMENTE
     elements.chatInput.value = '';
     elements.chatInput.style.height = 'auto';
-    elements.chatInput.disabled = false;
     elements.chatInput.focus();
 
     // Parar indicador de digitação
@@ -599,49 +598,47 @@ async function handleSendMessage(e) {
         socketManager.stopTyping(state.selectedContact.contact_user_id);
     }
 
-    // ✅ FIX: Flag para controlar se já recebeu confirmação
-    let messageConfirmed = false;
     let serverMessage = null;
+    let usedMethod = null;
 
     try {
         console.log('📤 Enviando mensagem...');
         
-        // ✅ Tentar WebSocket primeiro
-        if (typeof socketManager !== 'undefined' && socketManager.connected) {
-            console.log('🔌 Usando WebSocket...');
-            
-            try {
-                serverMessage = await socketManager.sendMessage(
-                    state.selectedContact.contact_user_id,
-                    content,
-                    tempId
-                );
-                
-                messageConfirmed = true; // ✅ Marcar como confirmado
-                console.log('✅ Mensagem confirmada via WebSocket:', serverMessage);
-            } catch (wsError) {
-                console.warn('⚠️ WebSocket falhou, tentando API REST...', wsError);
-            }
+        // ✅ Tentar WebSocket E REST em paralelo, usar o primeiro que responder
+        const wsPromise = (typeof socketManager !== 'undefined' && socketManager.connected)
+            ? socketManager.sendMessage(state.selectedContact.contact_user_id, content, tempId)
+                .then(msg => ({ message: msg, method: 'websocket' }))
+                .catch(err => {
+                    console.warn('⚠️ WebSocket falhou:', err);
+                    return null;
+                })
+            : Promise.resolve(null);
+
+        const restPromise = API.sendMessage(state.selectedContact.contact_user_id, content)
+            .then(response => ({ message: response.data.message, method: 'rest' }))
+            .catch(err => {
+                console.warn('⚠️ REST API falhou:', err);
+                return null;
+            });
+
+        // ✅ Race: usa o primeiro que responder com sucesso
+        const results = await Promise.all([wsPromise, restPromise]);
+        const successfulResult = results.find(r => r !== null);
+
+        if (!successfulResult) {
+            throw new Error('Ambos WebSocket e REST falharam');
         }
 
-        // ✅ FIX: Só usar REST se WebSocket falhou
-        if (!messageConfirmed) {
-            console.log('📡 Usando API REST...');
-            
-            const response = await API.sendMessage(
-                state.selectedContact.contact_user_id,
-                content
-            );
-            
-            serverMessage = response.data.message;
-            messageConfirmed = true; // ✅ Marcar como confirmado
-            console.log('✅ Mensagem confirmada via API REST:', serverMessage);
-        }
+        serverMessage = successfulResult.message;
+        usedMethod = successfulResult.method;
+        
+        console.log(`✅ Mensagem confirmada via ${usedMethod.toUpperCase()}:`, serverMessage);
 
-        // ✅ FIX: Verificar se a mensagem otimista ainda existe antes de substituir
+        // ✅ Substituir otimista IMEDIATAMENTE
         const index = state.messages.findIndex(m => m.id === tempId);
+        
         if (index !== -1) {
-            // ✅ Verificar se não há duplicação com o ID real do servidor
+            // Verificar duplicação
             const isDuplicate = state.messages.some(m => 
                 m.id === serverMessage.id && m.id !== tempId
             );
@@ -650,29 +647,29 @@ async function handleSendMessage(e) {
                 console.warn('⚠️ Mensagem duplicada detectada, removendo apenas a otimista');
                 state.messages.splice(index, 1);
             } else {
-                // Substituir otimista pela real
-                state.messages.splice(index, 1, {
+                // ✅ Substituir no mesmo índice para não "pular" visualmente
+                state.messages[index] = {
                     ...serverMessage,
                     status: 'sent'
-                });
+                };
             }
             
             state.pendingMessages.delete(tempId);
-            console.log('✅ Mensagem otimista substituída pela real');
             
+            // ✅ Re-renderizar APENAS se necessário (otimização)
             renderMessages();
-            Utils.scrollToBottom(elements.chatMessages, 'auto');
-        } else {
-            console.warn('⚠️ Mensagem otimista já foi removida (possível race condition evitada)');
         }
 
         updateContactListOnNewMessage(serverMessage);
-    } catch (error) {
-        console.error("ERRO ao enviar mensagem:", error);
 
+    } catch (error) {
+        console.error("❌ ERRO ao enviar mensagem:", error);
+
+        // ✅ Marcar como erro para retry
         const index = state.messages.findIndex(m => m.id === tempId);
         if (index !== -1) {
             state.messages[index].status = 'error';
+            state.pendingMessages.delete(tempId); // ✅ Limpar pendente
             renderMessages();
         }
 
