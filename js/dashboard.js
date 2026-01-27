@@ -149,31 +149,46 @@ function setupSocketHandlers() {
         return;
     }
 
-    // ✅ FIX: Nova mensagem recebida - atualizar contador
+    // ✅ FIX: Nova mensagem recebida - IGNORAR se você mesmo enviou
     socketManager.on('newMessage', (message) => {
-        console.log("Nova mensagem recebida:", message);
+        console.log("💬 Nova mensagem recebida:", message);
 
+        // ✅ FIX CRÍTICO: Ignorar broadcast de mensagens que VOCÊ enviou
+        if (message.sender_id === state.currentUser.id) {
+            console.log('🚫 Ignorando broadcast da própria mensagem (já confirmada)');
+            return;
+        }
+
+        // Só processar mensagens RECEBIDAS (de outros usuários)
         if (state.selectedContact && 
-            (message.sender_id === state.selectedContact.contact_user_id ||
-             message.receiver_id === state.selectedContact.contact_user_id)) {
+            (message.sender_id === state.selectedContact.contact_user_id)) {
             
+            // ✅ Verificar se já existe (evitar duplicação)
+            const exists = state.messages.some(m => m.id === message.id);
+            if (exists) {
+                console.log('🚫 Mensagem já existe, ignorando');
+                return;
+            }
+        
             state.messages.push(message);
             renderMessages();
             Utils.scrollToBottom(elements.chatMessages);
-            
-            if (message.receiver_id === state.currentUser.id) {
+        
+            // Marcar como lida se estiver na conversa aberta
+            if (socketManager && socketManager.connected) {
                 socketManager.markAsRead(message.sender_id);
             }
         } else {
-            // ✅ FIX: Atualizar contador se não estiver na conversa aberta
+            // ✅ Atualizar contador se não estiver na conversa aberta
             updateContactUnreadCount(message.sender_id);
         }
 
+        // Mostrar notificação
         if (message.receiver_id === state.currentUser.id) {
             const sender = state.contacts.find(
                 c => c.contact_user_id === message.sender_id
             );
-
+            
             if (sender && notificationManager?.isEnabled()) {
                 notificationManager.showMessageNotification(
                     message,
