@@ -91,10 +91,13 @@ class SocketManager {
             
             // ✅ Resolver promessa pendente se existir
             if (data.temp_id && this.pendingConfirmations.has(data.temp_id)) {
-                const { resolve } = this.pendingConfirmations.get(data.temp_id);
-                resolve(data.message);
-                this.pendingConfirmations.delete(data.temp_id);
-                console.log(`✅ Confirmação processada para temp_id: ${data.temp_id}`);
+                const pending = this.pendingConfirmations.get(data.temp_id);
+
+                clearTimeout(pending.timeout);
+                pending.resolve(data.message);
+                this.pendingConfirmations.delete(data.temp_id); // Limpar Map
+
+                console.log(`Confirmação event processada: ${data.temp_id}`);
             }
             
             // Emitir evento para dashboard
@@ -205,60 +208,53 @@ class SocketManager {
         console.log(`👥 Saiu da conversa com usuário ${contactUserId}`);
     }
 
-    // ✅ MÉTODO CORRIGIDO: Agora retorna Promise
+    // ✅ MÉTODO CORRIGIDO: Timeout limpa pendingConfirmations
     sendMessage(receiverId, content, tempId = null) {
         if (!this.connected) {
             console.warn('⚠️ Não conectado ao WebSocket');
-            if (typeof Utils !== 'undefined') {
-                Utils.showToast('Não conectado. Tentando enviar...', 'warning');
-            }
             return Promise.reject(new Error('WebSocket não conectado'));
         }
-
+        
         const finalTempId = tempId || `temp_${Date.now()}_${Math.random()}`;
-
+        
         const payload = {
             receiver_id: receiverId,
             content: content,
             temp_id: finalTempId
         };
-
-        console.log('📤 ENVIANDO mensagem:', payload);
-
-        // ✅ Criar Promise que será resolvida quando receber confirmação
+        
+        console.log('📤 ENVIANDO mensagem via WebSocket:', payload);
+        
         return new Promise((resolve, reject) => {
-            // Guardar callbacks para resolver depois
-            this.pendingConfirmations.set(finalTempId, { resolve, reject });
-
-            // Timeout de 10 segundos para considerar falha
+            // ✅ Timeout que LIMPA o Map
             const timeout = setTimeout(() => {
                 if (this.pendingConfirmations.has(finalTempId)) {
-                    console.error(`❌ TIMEOUT ao enviar mensagem (temp_id: ${finalTempId})`);
-                    this.pendingConfirmations.delete(finalTempId);
-                    reject(new Error('Timeout ao enviar mensagem'));
+                    console.error(`❌ TIMEOUT WebSocket (temp_id: ${finalTempId})`);
+                    this.pendingConfirmations.delete(finalTempId); // ✅ FIX: Limpar
+                    reject(new Error('Timeout ao enviar via WebSocket'));
                 }
-            }, 10000);
+            }, 5000); // ✅ Reduzido para 5s
+
+            // Guardar callbacks
+            this.pendingConfirmations.set(finalTempId, { resolve, reject, timeout });
 
             // Emitir mensagem
             this.socket.emit('send_message', payload, (response) => {
-                // ✅ Callback de acknowledgment do Socket.IO
-                clearTimeout(timeout);
-                
-                if (response && response.success) {
-                    console.log('✅ ACK recebido do servidor:', response);
-                    
-                    // Se já temos a mensagem no response, resolver imediatamente
-                    if (response.message) {
-                        if (this.pendingConfirmations.has(finalTempId)) {
-                            this.pendingConfirmations.delete(finalTempId);
-                        }
-                        resolve(response.message);
-                    }
-                    // Senão, aguardar evento 'message_sent'
+                const pending = this.pendingConfirmations.get(finalTempId);
+                if (!pending) {
+                    console.warn('⚠️ Confirmação já processada ou timeout');
+                    return;
+                }
+
+                clearTimeout(pending.timeout); // ✅ Limpar timeout
+                this.pendingConfirmations.delete(finalTempId); // ✅ Limpar Map
+            
+                if (response && response.success && response.message) {
+                    console.log('✅ ACK WebSocket:', response);
+                    resolve(response.message);
                 } else {
                     console.error('❌ Erro no ACK:', response);
-                    this.pendingConfirmations.delete(finalTempId);
-                    reject(new Error(response?.message || 'Erro ao enviar mensagem'));
+                    reject(new Error(response?.message || 'Erro ao enviar'));
                 }
             });
         });
